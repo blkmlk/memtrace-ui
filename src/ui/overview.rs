@@ -9,28 +9,28 @@ pub fn show(ui: &mut Ui, info: &AnalyzedInfo) {
         ui.horizontal(|ui| {
             ui.add_space(20.0);
             ui.columns(3, |columns| {
-                let [c1, c2, c3] = columns.get_disjoint_mut([0, 1, 2]).unwrap();
+                let [col1, col2, col3] = columns.get_disjoint_mut([0, 1, 2]).unwrap();
 
                 let total_ram = info.data.page_size * info.data.pages;
 
-                key_value(c1, "application", &info.app_name);
-                key_value(c1, "total runtime", format!("{:?}", info.data.duration));
-                key_value(c1, "total system memory", ByteSize::b(total_ram));
+                key_value(col1, "application", &info.app_name);
+                key_value(col1, "total runtime", format!("{:?}", info.data.duration));
+                key_value(col1, "total system memory", ByteSize::b(total_ram));
 
                 key_value(
-                    c2,
+                    col2,
                     "calls to allocation functions",
                     info.data.total.allocations,
                 );
-                key_value(c2, "temporary allocations", info.data.total.temporary);
+                key_value(col2, "temporary allocations", info.data.total.temporary);
 
                 key_value(
-                    c3,
+                    col3,
                     "peak heap memory consumption",
                     ByteSize::b(info.data.total.peak),
                 );
-                key_value(c3, "peak RSS", ByteSize::b(info.data.peak_rss));
-                key_value(c3, "total memory leaked", info.data.total.leaked);
+                key_value(col3, "peak RSS", ByteSize::b(info.data.peak_rss));
+                key_value(col3, "total memory leaked", info.data.total.leaked);
             });
             ui.add_space(20.0);
         });
