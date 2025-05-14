@@ -46,16 +46,13 @@ fn main() -> Result<()> {
         .exec(opt.cmd, opt.args, cwd, lib_path.to_str().unwrap())
         .context("failed to execute process")?;
 
-    let parsed_data = common::parser::Parser::new()
+    let data = common::parser::Parser::new()
         .parse_file(&trace_filepath)
         .context("failed to parse trace file")?;
 
-    let data = MemInfo {
-        app_name,
-        data: parsed_data,
-    };
+    let info = MemInfo { app_name, data };
 
-    ui::run_ui(data).map_err(|e| anyhow!("{:?}", e))?;
+    ui::run_ui(info).map_err(|e| anyhow!("{:?}", e))?;
 
     Ok(())
 }
