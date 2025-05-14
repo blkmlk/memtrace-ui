@@ -1,17 +1,18 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 #![allow(rustdoc::missing_crate_level_docs)] // it's an example
 
-mod ui;
 mod prelude;
+mod ui;
 
-use std::{env, fs, io};
-use std::fs::File;
-use std::io::BufWriter;
-use std::path::{Path, PathBuf};
+use crate::ui::AnalyzedInfo;
 use anyhow::{anyhow, Context};
 use clap::Parser;
 use common::interpret::Interpreter;
 use prelude::*;
+use std::fs::File;
+use std::io::BufWriter;
+use std::path::{Path, PathBuf};
+use std::{env, fs, io};
 
 #[derive(Parser)]
 struct Opt {
@@ -21,7 +22,9 @@ struct Opt {
 
 fn main() -> Result<()> {
     let opt = Opt::parse();
-    
+
+    let app_name = opt.cmd.split("/").last().unwrap().to_string();
+
     let Some(cargo_home) = env::var_os("CARGO_HOME") else {
         anyhow::bail!("missing $CARGO_HOME");
     };
@@ -43,10 +46,15 @@ fn main() -> Result<()> {
         .exec(opt.cmd, opt.args, cwd, lib_path.to_str().unwrap())
         .context("failed to execute process")?;
 
-    let data = common::parser::Parser::new()
+    let parsed_data = common::parser::Parser::new()
         .parse_file(&trace_filepath)
         .context("failed to parse trace file")?;
-    
+
+    let data = AnalyzedInfo {
+        app_name,
+        data: parsed_data,
+    };
+
     ui::run_ui(data).map_err(|e| anyhow!("{:?}", e))?;
 
     Ok(())
@@ -63,7 +71,7 @@ fn load_lib_if_needed(path: impl AsRef<Path>) -> Result<()> {
     let mut response = reqwest::blocking::get(
         "https://github.com/blkmlk/memtrack-rs/releases/download/v0.1.1/libmemtrack.dylib",
     )
-        .context("failed to download libmemtrack.dylib")?;
+    .context("failed to download libmemtrack.dylib")?;
 
     if !response.status().is_success() {
         anyhow::bail!(
@@ -80,4 +88,3 @@ fn load_lib_if_needed(path: impl AsRef<Path>) -> Result<()> {
 
     Ok(())
 }
-    
