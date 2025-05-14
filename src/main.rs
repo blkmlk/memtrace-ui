@@ -4,7 +4,7 @@
 mod prelude;
 mod ui;
 
-use crate::ui::AnalyzedInfo;
+use crate::ui::MemInfo;
 use anyhow::{anyhow, Context};
 use clap::Parser;
 use common::interpret::Interpreter;
@@ -50,7 +50,7 @@ fn main() -> Result<()> {
         .parse_file(&trace_filepath)
         .context("failed to parse trace file")?;
 
-    let data = AnalyzedInfo {
+    let data = MemInfo {
         app_name,
         data: parsed_data,
     };

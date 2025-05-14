@@ -1,9 +1,9 @@
 use crate::ui::helpers::add_key_value;
-use crate::ui::AnalyzedInfo;
+use crate::ui::MemInfo;
 use bytesize::ByteSize;
 use egui::{Layout, Ui};
 
-pub fn show(ui: &mut Ui, info: &AnalyzedInfo) {
+pub fn show(ui: &mut Ui, info: &MemInfo) {
     ui.with_layout(Layout::default(), |ui| {
         ui.add_space(20.0);
         ui.horizontal(|ui| {

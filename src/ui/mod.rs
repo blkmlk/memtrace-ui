@@ -5,7 +5,7 @@ use common::parser::AccumulatedData;
 use eframe::emath::Align;
 use egui::Layout;
 
-pub fn run_ui(data: AnalyzedInfo) -> eframe::Result {
+pub fn run_ui(data: MemInfo) -> eframe::Result {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default().with_inner_size([800.0, 600.0]),
         ..Default::default()
@@ -24,18 +24,18 @@ enum MainTab {
     Flamegraph,
 }
 
-pub struct AnalyzedInfo {
+pub struct MemInfo {
     pub app_name: String,
     pub data: AccumulatedData,
 }
 
 struct MemgraphApp {
-    info: AnalyzedInfo,
+    info: MemInfo,
     current_tab: MainTab,
 }
 
 impl MemgraphApp {
-    pub fn new(info: AnalyzedInfo) -> Self {
+    pub fn new(info: MemInfo) -> Self {
         Self {
             info,
             current_tab: MainTab::Overview,
