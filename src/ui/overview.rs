@@ -1,10 +1,11 @@
 use crate::ui::helpers::add_key_value;
 use crate::ui::MemInfo;
 use bytesize::ByteSize;
-use common::parser::Frame;
+use common::parser::{AccumulatedData, Frame};
 use eframe::emath::Align;
 use egui::{Layout, Ui};
 use egui_extras::{Column, TableBuilder};
+use itertools::Itertools;
 use std::time::Instant;
 
 pub fn show(ui: &mut Ui, info: &MemInfo) {
@@ -49,20 +50,17 @@ pub fn show(ui: &mut Ui, info: &MemInfo) {
             ui.add_space(10.0);
             ui.columns(4, |columns| {
                 let [col1, col2, col3, col4] = columns.get_disjoint_mut([0, 1, 2, 3]).unwrap();
-                let contributes = info.data.allocations.iter().map(|alloc| {
-                    let trace = &info.data.traces[(alloc.trace_idx - 1) as usize];
-                    let ip = &info.data.instruction_pointers[(trace.ip_idx - 1) as usize];
-                    let fn_idx = match ip.frame {
-                        Frame::Single { function_idx } => function_idx,
-                        Frame::Multiple { function_idx, .. } => function_idx,
-                    };
-                    let fn_name = &info.data.strings[fn_idx];
-                    [fn_name.to_string(), alloc.data.peak.to_string()]
-                });
+
+                let contributions = make_peak_contributions(&info.data);
 
                 col1.horizontal(|ui| {
                     ui.add_space(10.0);
-                    add_table(ui, "Peak Contributions", ["Location", "Peak"], contributes);
+                    add_table(
+                        ui,
+                        "Peak Contributions",
+                        ["Location", "Peak"],
+                        contributions,
+                    );
                     ui.add_space(10.0);
                 });
             });
@@ -71,11 +69,37 @@ pub fn show(ui: &mut Ui, info: &MemInfo) {
     });
 }
 
-fn add_table<const N: usize>(
+fn make_peak_contributions(data: &AccumulatedData) -> Vec<(String, String)> {
+    let sum = data
+        .allocations
+        .iter()
+        .map(|alloc| {
+            let trace = &data.traces[(alloc.trace_idx - 1) as usize];
+            let ip = &data.instruction_pointers[(trace.ip_idx - 1) as usize];
+            let fn_idx = match ip.frame {
+                Frame::Single { function_idx } => function_idx,
+                Frame::Multiple { function_idx, .. } => function_idx,
+            };
+            let fn_name = &data.strings[fn_idx];
+            (fn_name, alloc.data.peak)
+        })
+        .into_grouping_map()
+        .sum();
+
+    let contributions = sum
+        .iter()
+        .sorted_by(|a, b| b.1.cmp(&a.1))
+        .map(|i| (i.0.to_string(), ByteSize::b(*i.1).to_string()))
+        .collect::<Vec<_>>();
+
+    contributions
+}
+
+fn add_table(
     ui: &mut Ui,
     label: &str,
-    headers: [&str; N],
-    data: impl IntoIterator<Item = [impl ToString; N]>,
+    headers: [&str; 2],
+    data: impl IntoIterator<Item = (String, String)>,
 ) {
     ui.push_id(Instant::now(), |ui| {
         ui.with_layout(Layout::top_down_justified(Align::Center), |ui| {
@@ -97,10 +121,10 @@ fn add_table<const N: usize>(
                     for a in data {
                         body.row(20.0, |mut row| {
                             row.col(|ui| {
-                                ui.label(a[0].to_string());
+                                ui.label(a.0);
                             });
                             row.col(|ui| {
-                                ui.label(a[1].to_string());
+                                ui.label(a.1);
                             });
                         })
                     }
