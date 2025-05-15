@@ -67,10 +67,10 @@ pub fn show(ui: &mut Ui, info: &MemInfo) {
     });
 }
 
-fn add_table<'a, const N: usize>(
+fn add_table<const N: usize>(
     ui: &mut Ui,
     label: &str,
-    headers: [&'a str; N],
+    headers: [&str; N],
     data: impl IntoIterator<Item = [impl ToString; N]>,
 ) {
     ui.with_layout(Layout::top_down_justified(Align::Center), |ui| {
