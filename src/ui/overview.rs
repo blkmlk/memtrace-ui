@@ -1,7 +1,9 @@
 use crate::ui::helpers::add_key_value;
 use crate::ui::MemInfo;
 use bytesize::ByteSize;
+use eframe::emath::Align;
 use egui::{Layout, Ui};
+use egui_extras::{Column, TableBuilder};
 
 pub fn show(ui: &mut Ui, info: &MemInfo) {
     ui.with_layout(Layout::default(), |ui| {
@@ -35,6 +37,45 @@ pub fn show(ui: &mut Ui, info: &MemInfo) {
             ui.add_space(20.0);
         });
         ui.add_space(20.0);
-        ui.separator()
+        ui.separator();
+        ui.add_space(20.0);
+        ui.horizontal(|ui| {
+            ui.add_space(20.0);
+            ui.columns(4, |columns| {
+                let [col1, col2, col3, col4] = columns.get_disjoint_mut([0, 1, 2, 3]).unwrap();
+                col1.with_layout(Layout::top_down_justified(Align::Center), |ui| {
+                    ui.label("Peak Contributions");
+                    TableBuilder::new(ui)
+                        .striped(true)
+                        .resizable(true)
+                        .cell_layout(Layout::left_to_right(Align::Center))
+                        .column(Column::remainder())
+                        .column(Column::remainder())
+                        .header(20.0, |mut header| {
+                            header.col(|ui| {
+                                ui.label("Location");
+                            });
+                            header.col(|ui| {
+                                ui.label("Peak");
+                            });
+                        })
+                        .body(|mut body| {
+                            body.row(20.0, |mut row| {
+                                row.col(|ui| {
+                                    ui.label("Key");
+                                });
+                                row.col(|ui| {
+                                    ui.label("Value");
+                                });
+                            })
+                        });
+                });
+            });
+            ui.add_space(20.0);
+        })
     });
+}
+
+fn expanding_content(ui: &mut Ui) {
+    ui.add(egui::Separator::default().vertical());
 }
