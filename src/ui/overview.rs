@@ -1,6 +1,7 @@
 use crate::ui::helpers::add_key_value;
 use crate::ui::MemInfo;
 use bytesize::ByteSize;
+use common::parser::Frame;
 use eframe::emath::Align;
 use egui::{Layout, Ui};
 use egui_extras::{Column, TableBuilder};
@@ -43,39 +44,61 @@ pub fn show(ui: &mut Ui, info: &MemInfo) {
             ui.add_space(20.0);
             ui.columns(4, |columns| {
                 let [col1, col2, col3, col4] = columns.get_disjoint_mut([0, 1, 2, 3]).unwrap();
-                col1.with_layout(Layout::top_down_justified(Align::Center), |ui| {
-                    ui.label("Peak Contributions");
-                    TableBuilder::new(ui)
-                        .striped(true)
-                        .resizable(true)
-                        .cell_layout(Layout::left_to_right(Align::Center))
-                        .column(Column::remainder())
-                        .column(Column::remainder())
-                        .header(20.0, |mut header| {
-                            header.col(|ui| {
-                                ui.label("Location");
-                            });
-                            header.col(|ui| {
-                                ui.label("Peak");
-                            });
-                        })
-                        .body(|mut body| {
-                            body.row(20.0, |mut row| {
-                                row.col(|ui| {
-                                    ui.label("Key");
-                                });
-                                row.col(|ui| {
-                                    ui.label("Value");
-                                });
-                            })
-                        });
+                let contributes = info.data.allocations.iter().map(|alloc| {
+                    let trace = &info.data.traces[(alloc.trace_idx - 1) as usize];
+                    let ip = &info.data.instruction_pointers[(trace.ip_idx - 1) as usize];
+                    let fn_idx = match ip.frame {
+                        Frame::Single { function_idx } => function_idx,
+                        Frame::Multiple { function_idx, .. } => function_idx,
+                    };
+                    let fn_name = &info.data.strings[fn_idx];
+                    [fn_name.to_string(), alloc.data.peak.to_string()]
                 });
+
+                add_table(
+                    col1,
+                    "Peak Contributions",
+                    ["Location", "Peak"],
+                    contributes,
+                );
             });
             ui.add_space(20.0);
         })
     });
 }
 
-fn expanding_content(ui: &mut Ui) {
-    ui.add(egui::Separator::default().vertical());
+fn add_table<'a, const N: usize>(
+    ui: &mut Ui,
+    label: &str,
+    headers: [&'a str; N],
+    data: impl IntoIterator<Item = [impl ToString; N]>,
+) {
+    ui.with_layout(Layout::top_down_justified(Align::Center), |ui| {
+        ui.label(label);
+        TableBuilder::new(ui)
+            .striped(true)
+            .resizable(true)
+            .cell_layout(Layout::left_to_right(Align::Center))
+            .column(Column::remainder().clip(true))
+            .column(Column::remainder())
+            .header(20.0, |mut header| {
+                for header_label in headers {
+                    header.col(|ui| {
+                        ui.label(header_label);
+                    });
+                }
+            })
+            .body(|mut body| {
+                for a in data {
+                    body.row(20.0, |mut row| {
+                        row.col(|ui| {
+                            ui.label(a[0].to_string());
+                        });
+                        row.col(|ui| {
+                            ui.label(a[1].to_string());
+                        });
+                    })
+                }
+            });
+    });
 }
