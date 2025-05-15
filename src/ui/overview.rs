@@ -5,6 +5,7 @@ use common::parser::Frame;
 use eframe::emath::Align;
 use egui::{Layout, Ui};
 use egui_extras::{Column, TableBuilder};
+use std::time::Instant;
 
 pub fn show(ui: &mut Ui, info: &MemInfo) {
     ui.with_layout(Layout::default(), |ui| {
@@ -41,7 +42,7 @@ pub fn show(ui: &mut Ui, info: &MemInfo) {
         ui.separator();
         ui.add_space(20.0);
         ui.horizontal(|ui| {
-            ui.add_space(20.0);
+            ui.add_space(10.0);
             ui.columns(4, |columns| {
                 let [col1, col2, col3, col4] = columns.get_disjoint_mut([0, 1, 2, 3]).unwrap();
                 let contributes = info.data.allocations.iter().map(|alloc| {
@@ -55,14 +56,13 @@ pub fn show(ui: &mut Ui, info: &MemInfo) {
                     [fn_name.to_string(), alloc.data.peak.to_string()]
                 });
 
-                add_table(
-                    col1,
-                    "Peak Contributions",
-                    ["Location", "Peak"],
-                    contributes,
-                );
+                col1.horizontal(|ui| {
+                    ui.add_space(10.0);
+                    add_table(ui, "Peak Contributions", ["Location", "Peak"], contributes);
+                    ui.add_space(10.0);
+                });
             });
-            ui.add_space(20.0);
+            ui.add_space(10.0);
         })
     });
 }
@@ -73,32 +73,34 @@ fn add_table<const N: usize>(
     headers: [&str; N],
     data: impl IntoIterator<Item = [impl ToString; N]>,
 ) {
-    ui.with_layout(Layout::top_down_justified(Align::Center), |ui| {
-        ui.label(label);
-        TableBuilder::new(ui)
-            .striped(true)
-            .resizable(true)
-            .cell_layout(Layout::left_to_right(Align::Center))
-            .column(Column::remainder().clip(true))
-            .column(Column::remainder())
-            .header(20.0, |mut header| {
-                for header_label in headers {
-                    header.col(|ui| {
-                        ui.label(header_label);
-                    });
-                }
-            })
-            .body(|mut body| {
-                for a in data {
-                    body.row(20.0, |mut row| {
-                        row.col(|ui| {
-                            ui.label(a[0].to_string());
+    ui.push_id(Instant::now(), |ui| {
+        ui.with_layout(Layout::top_down_justified(Align::Center), |ui| {
+            ui.label(label);
+            TableBuilder::new(ui)
+                .striped(true)
+                .resizable(true)
+                .cell_layout(Layout::left_to_right(Align::Center))
+                .column(Column::remainder().clip(true))
+                .column(Column::remainder())
+                .header(20.0, |mut header| {
+                    for header_label in headers {
+                        header.col(|ui| {
+                            ui.label(header_label);
                         });
-                        row.col(|ui| {
-                            ui.label(a[1].to_string());
-                        });
-                    })
-                }
-            });
+                    }
+                })
+                .body(|mut body| {
+                    for a in data {
+                        body.row(20.0, |mut row| {
+                            row.col(|ui| {
+                                ui.label(a[0].to_string());
+                            });
+                            row.col(|ui| {
+                                ui.label(a[1].to_string());
+                            });
+                        })
+                    }
+                });
+        });
     });
 }
