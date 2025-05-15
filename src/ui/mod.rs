@@ -7,7 +7,7 @@ use egui::Layout;
 
 pub fn run_ui(data: MemInfo) -> eframe::Result {
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size([800.0, 600.0]),
+        viewport: egui::ViewportBuilder::default().with_inner_size([1024.0, 720.0]),
         ..Default::default()
     };
     eframe::run_native(

@@ -51,15 +51,40 @@ pub fn show(ui: &mut Ui, info: &MemInfo) {
             ui.columns(4, |columns| {
                 let [col1, col2, col3, col4] = columns.get_disjoint_mut([0, 1, 2, 3]).unwrap();
 
-                let contributions = make_peak_contributions(&info.data);
-
+                let peaks = make_top_peaks(&info.data);
                 col1.horizontal(|ui| {
+                    ui.add_space(10.0);
+                    add_table(ui, "Peak Contributions", ["Location", "Peak"], peaks);
+                    ui.add_space(10.0);
+                });
+
+                let leaks = make_top_leaks(&info.data);
+                col2.horizontal(|ui| {
+                    ui.add_space(10.0);
+                    add_table(ui, "Largest Memory Leaks", ["Location", "Leaked"], leaks);
+                    ui.add_space(10.0);
+                });
+
+                let allocations = make_top_allocations(&info.data);
+                col3.horizontal(|ui| {
                     ui.add_space(10.0);
                     add_table(
                         ui,
-                        "Peak Contributions",
-                        ["Location", "Peak"],
-                        contributions,
+                        "Most Memory Allocations",
+                        ["Location", "Allocations"],
+                        allocations,
+                    );
+                    ui.add_space(10.0);
+                });
+
+                let tmp_allocations = make_top_tmp_allocations(&info.data);
+                col4.horizontal(|ui| {
+                    ui.add_space(10.0);
+                    add_table(
+                        ui,
+                        "Most Temporary Allocations",
+                        ["Location", "Temporary"],
+                        tmp_allocations,
                     );
                     ui.add_space(10.0);
                 });
@@ -69,7 +94,7 @@ pub fn show(ui: &mut Ui, info: &MemInfo) {
     });
 }
 
-fn make_peak_contributions(data: &AccumulatedData) -> Vec<(String, String)> {
+fn make_top_peaks(data: &AccumulatedData) -> Vec<(String, String)> {
     let grouped = data
         .allocations
         .iter()
@@ -90,6 +115,84 @@ fn make_peak_contributions(data: &AccumulatedData) -> Vec<(String, String)> {
         .iter()
         .sorted_by(|a, b| b.1.cmp(&a.1))
         .map(|i| (i.0.to_string(), ByteSize::b(*i.1).to_string()))
+        .collect::<Vec<_>>();
+
+    contributions
+}
+
+fn make_top_leaks(data: &AccumulatedData) -> Vec<(String, String)> {
+    let grouped = data
+        .allocations
+        .iter()
+        .map(|alloc| {
+            let trace = &data.traces[(alloc.trace_idx - 1) as usize];
+            let ip = &data.instruction_pointers[(trace.ip_idx - 1) as usize];
+            let fn_idx = match ip.frame {
+                Frame::Single { function_idx } => function_idx,
+                Frame::Multiple { function_idx, .. } => function_idx,
+            };
+            let fn_name = &data.strings[fn_idx];
+            (fn_name, alloc.data.leaked)
+        })
+        .into_grouping_map()
+        .sum();
+
+    let contributions = grouped
+        .iter()
+        .sorted_by(|a, b| b.1.cmp(&a.1))
+        .map(|i| (i.0.to_string(), ByteSize::b(*i.1).to_string()))
+        .collect::<Vec<_>>();
+
+    contributions
+}
+
+fn make_top_allocations(data: &AccumulatedData) -> Vec<(String, String)> {
+    let grouped = data
+        .allocations
+        .iter()
+        .map(|alloc| {
+            let trace = &data.traces[(alloc.trace_idx - 1) as usize];
+            let ip = &data.instruction_pointers[(trace.ip_idx - 1) as usize];
+            let fn_idx = match ip.frame {
+                Frame::Single { function_idx } => function_idx,
+                Frame::Multiple { function_idx, .. } => function_idx,
+            };
+            let fn_name = &data.strings[fn_idx];
+            (fn_name, alloc.data.allocations)
+        })
+        .into_grouping_map()
+        .sum();
+
+    let contributions = grouped
+        .iter()
+        .sorted_by(|a, b| b.1.cmp(&a.1))
+        .map(|i| (i.0.to_string(), i.1.to_string()))
+        .collect::<Vec<_>>();
+
+    contributions
+}
+
+fn make_top_tmp_allocations(data: &AccumulatedData) -> Vec<(String, String)> {
+    let grouped = data
+        .allocations
+        .iter()
+        .map(|alloc| {
+            let trace = &data.traces[(alloc.trace_idx - 1) as usize];
+            let ip = &data.instruction_pointers[(trace.ip_idx - 1) as usize];
+            let fn_idx = match ip.frame {
+                Frame::Single { function_idx } => function_idx,
+                Frame::Multiple { function_idx, .. } => function_idx,
+            };
+            let fn_name = &data.strings[fn_idx];
+            (fn_name, alloc.data.temporary)
+        })
+        .into_grouping_map()
+        .sum();
+
+    let contributions = grouped
+        .iter()
+        .sorted_by(|a, b| b.1.cmp(&a.1))
+        .map(|i| (i.0.to_string(), i.1.to_string()))
         .collect::<Vec<_>>();
 
     contributions
