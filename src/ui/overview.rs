@@ -34,7 +34,11 @@ pub fn show(ui: &mut Ui, info: &MemInfo) {
                     ByteSize::b(info.data.total.peak),
                 );
                 add_key_value(col3, "peak RSS", ByteSize::b(info.data.peak_rss));
-                add_key_value(col3, "total memory leaked", info.data.total.leaked);
+                add_key_value(
+                    col3,
+                    "total memory leaked",
+                    ByteSize::b(info.data.total.leaked),
+                );
             });
             ui.add_space(20.0);
         });
