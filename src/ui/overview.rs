@@ -70,7 +70,7 @@ pub fn show(ui: &mut Ui, info: &MemInfo) {
 }
 
 fn make_peak_contributions(data: &AccumulatedData) -> Vec<(String, String)> {
-    let sum = data
+    let grouped = data
         .allocations
         .iter()
         .map(|alloc| {
@@ -86,7 +86,7 @@ fn make_peak_contributions(data: &AccumulatedData) -> Vec<(String, String)> {
         .into_grouping_map()
         .sum();
 
-    let contributions = sum
+    let contributions = grouped
         .iter()
         .sorted_by(|a, b| b.1.cmp(&a.1))
         .map(|i| (i.0.to_string(), ByteSize::b(*i.1).to_string()))
