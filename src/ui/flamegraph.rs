@@ -35,12 +35,12 @@ pub fn draw_flamegraph(ui: &mut Ui, options: Options, root_frames: &[StackFrame]
                 options,
             };
 
-            draw_root_frames(ui, &canvas, root_frames);
+            draw_root_frames(&canvas, root_frames);
         });
     });
 }
 
-fn draw_root_frames(ui: &mut Ui, canvas: &Canvas, frames: &[StackFrame]) {
+fn draw_root_frames(canvas: &Canvas, frames: &[StackFrame]) {
     let min_x = canvas.rect.min.x;
     let max_x = canvas.rect.max.x;
 
@@ -59,9 +59,9 @@ fn draw_one_frame(
     depht: u32,
     min_x: f32,
     max_x: f32,
-    root: bool,
+    first_run: bool,
 ) {
-    let min_y = if root {
+    let min_y = if first_run {
         canvas.rect.min.y
     } else {
         canvas.rect.min.y + (depht - 1) as f32 * (canvas.options.frame_height + FRAME_V_SPACING)
@@ -69,7 +69,7 @@ fn draw_one_frame(
 
     let max_y = min_y + canvas.options.frame_height;
 
-    if !root {
+    if !first_run {
         let rect = Rect::from_min_max(pos2(min_x, min_y), pos2(max_x, max_y));
 
         canvas.painter.rect_filled(rect, 0.0, Color32::GREEN);
