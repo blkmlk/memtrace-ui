@@ -67,6 +67,7 @@ impl Flamegraph {
         let max_x = canvas.rect.max.x;
 
         self.draw_one_frame(canvas, root, max_depth, min_x, max_x);
+
         if self.options.show_info_bar {
             self.draw_info_bar(canvas, max_depth, min_x, max_x);
         }
@@ -129,19 +130,11 @@ impl Flamegraph {
         for (_, child) in &frame.children {
             let mut is_selected = false;
 
-            if !self.selected_chain_ids.is_empty() {
-                if self
-                    .selected_chain_ids
-                    .intersection(&child.chain_ids)
-                    .next()
-                    .is_none()
-                {
+            if child.chain_ids.len() == self.selected_chain_ids.len() {
+                if child.chain_ids != self.selected_chain_ids {
                     continue;
                 }
-
-                if self.selected_chain_ids.len() == 1 {
-                    is_selected = true;
-                }
+                is_selected = true;
             }
 
             let child_value = if is_selected {
