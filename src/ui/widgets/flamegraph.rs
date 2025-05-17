@@ -29,14 +29,14 @@ struct Canvas {
 
 pub struct Flamegraph {
     options: Options,
-    selected_chain_ids: Vec<u32>,
+    selected_chain_ids: HashSet<u32>,
 }
 
 impl Flamegraph {
     pub fn new<'a>(opts: Options) -> Self {
         Self {
             options: opts,
-            selected_chain_ids: vec![],
+            selected_chain_ids: HashSet::new(),
         }
     }
 
@@ -94,7 +94,7 @@ impl Flamegraph {
             rect_color = saturate(rect_color, 0.3);
 
             if canvas.response.clicked() {
-                self.selected_chain_ids = frame.chain_ids.iter().copied().collect();
+                self.selected_chain_ids = frame.chain_ids.clone();
             }
         };
 
@@ -121,10 +121,11 @@ impl Flamegraph {
             let mut is_selected = false;
 
             if !self.selected_chain_ids.is_empty() {
-                if !self
+                if self
                     .selected_chain_ids
-                    .iter()
-                    .any(|chain_id| child.chain_ids.contains(chain_id))
+                    .intersection(&child.chain_ids)
+                    .next()
+                    .is_none()
                 {
                     continue;
                 }
