@@ -42,7 +42,7 @@ impl Flamegraph {
 
     pub fn show<'a>(&mut self, ui: &mut Ui, frames: impl IntoIterator<Item = &'a str>) {
         ui.horizontal_centered(|ui| {
-            let root = build_stackframes(frames);
+            let (root, max_depth) = build_stackframes(frames);
 
             Frame::canvas(ui.style()).show(ui, |ui| {
                 let rect = ui.available_rect_before_wrap();
@@ -55,16 +55,16 @@ impl Flamegraph {
                     painter: ui.painter_at(rect),
                 };
 
-                self.draw(&canvas, &root);
+                self.draw(&canvas, &root, max_depth);
             });
         });
     }
 
-    fn draw(&mut self, canvas: &Canvas, root: &StackFrame) {
+    fn draw(&mut self, canvas: &Canvas, root: &StackFrame, max_depth: u32) {
         let min_x = canvas.rect.min.x;
         let max_x = canvas.rect.max.x;
 
-        self.draw_one_frame(canvas, root, 0, min_x, max_x);
+        self.draw_one_frame(canvas, root, max_depth, min_x, max_x);
     }
 
     fn draw_one_frame(
@@ -143,35 +143,45 @@ impl Flamegraph {
 
             let child_max_x = max_x.min(child_min_x + (child_value / frame.value) as f32 * length);
 
-            self.draw_one_frame(canvas, child, depth + 1, child_min_x, child_max_x);
+            self.draw_one_frame(canvas, child, depth - 1, child_min_x, child_max_x);
 
             child_min_x = child_max_x + FRAME_H_SPACING;
         }
     }
 }
 
-fn build_stackframes<'a>(chains: impl IntoIterator<Item = &'a str>) -> StackFrame {
+fn build_stackframes<'a>(chains: impl IntoIterator<Item = &'a str>) -> (StackFrame, u32) {
     let mut root = StackFrame::default();
     root.label = "all".to_string();
 
+    let mut max_depth = 0;
     for (chain_id, chain) in chains.into_iter().enumerate() {
         let (frames, value) = chain.rsplit_once(" ").unwrap();
         let value = value.parse::<f64>().unwrap();
 
         root.chain_ids.insert(chain_id as u32);
         root.value += value;
-        fill_children(&mut root, frames, value, chain_id as u32);
+        fill_children(&mut root, frames, value, chain_id as u32, 1, &mut max_depth);
     }
 
-    root
+    (root, max_depth)
 }
 
-fn fill_children(sf: &mut StackFrame, frames: &str, value: f64, chain_id: u32) {
+fn fill_children(
+    sf: &mut StackFrame,
+    frames: &str,
+    value: f64,
+    chain_id: u32,
+    depth: u32,
+    max_depth: &mut u32,
+) {
     let Some((frame, frames)) = frames.split_once(";") else {
         sf.label = frames.to_string();
         sf.value += value;
         return;
     };
+
+    *max_depth = depth.max(*max_depth);
 
     let next = sf
         .children
@@ -186,7 +196,7 @@ fn fill_children(sf: &mut StackFrame, frames: &str, value: f64, chain_id: u32) {
     next.chain_ids.insert(chain_id);
     next.value += value;
 
-    fill_children(next, frames, value, chain_id);
+    fill_children(next, frames, value, chain_id, depth + 1, max_depth);
 }
 
 pub fn make_frame_color(value: f64, depth: u32, min_x: f32, max_x: f32) -> Color32 {
