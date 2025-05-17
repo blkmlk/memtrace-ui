@@ -109,7 +109,7 @@ fn build_stackframes<'a>(chains: impl IntoIterator<Item = &'a str>) -> StackFram
 fn fill_children(sf: &mut StackFrame, frames: &str, value: f64) {
     let Some((frame, frames)) = frames.split_once(";") else {
         sf.label = frames.to_string();
-        sf.value = value;
+        sf.value += value;
         return;
     };
 
