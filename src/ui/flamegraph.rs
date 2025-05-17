@@ -39,6 +39,7 @@ impl FlamegraphPage {
         let options = Options {
             frame_height: 20.0,
             show_info_bar: true,
+            unit: "bytes".to_string(),
         };
 
         let mut lines = Vec::new();

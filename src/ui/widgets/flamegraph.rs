@@ -5,13 +5,14 @@ use std::hash::{DefaultHasher, Hash, Hasher};
 
 const FRAME_V_SPACING: f32 = 4.0;
 const FRAME_H_SPACING: f32 = 4.0;
-const INFO_BAR_HEIGHT: f32 = 40.0;
+const INFO_BAR_HEIGHT: f32 = 35.0;
 const TEXT_HEIGHT: f32 = 15.0;
 
 #[derive(Clone)]
 pub struct Options {
     pub frame_height: f32,
     pub show_info_bar: bool,
+    pub unit: String,
 }
 
 #[derive(Clone, Default)]
@@ -57,16 +58,16 @@ impl Flamegraph {
                     painter: ui.painter_at(rect),
                 };
 
-                self.draw(&canvas, &root, max_depth);
+                self.draw(&canvas, &root, max_depth, root.value);
             });
         });
     }
 
-    fn draw(&mut self, canvas: &Canvas, root: &StackFrame, max_depth: u32) {
+    fn draw(&mut self, canvas: &Canvas, root: &StackFrame, max_depth: u32, root_value: f64) {
         let min_x = canvas.rect.min.x;
         let max_x = canvas.rect.max.x;
 
-        self.draw_one_frame(canvas, root, max_depth, min_x, max_x);
+        self.draw_one_frame(canvas, root, max_depth, min_x, max_x, root_value);
 
         if self.options.show_info_bar {
             self.draw_info_bar(canvas, max_depth, min_x, max_x);
@@ -80,6 +81,7 @@ impl Flamegraph {
         depth: u32,
         min_x: f32,
         max_x: f32,
+        root_value: f64,
     ) {
         let min_y =
             canvas.rect.min.y + depth as f32 * (self.options.frame_height + FRAME_V_SPACING);
@@ -100,7 +102,13 @@ impl Flamegraph {
             rect_color = saturate(rect_color, 0.3);
 
             if self.options.show_info_bar {
-                self.info_bar_text = format!("Function: {}: {}", frame.label, frame.value);
+                self.info_bar_text = format!(
+                    "Function: {} ({} {},  {:.2}%)",
+                    frame.label,
+                    frame.value,
+                    self.options.unit,
+                    (frame.value / root_value) * 100.0
+                );
             }
 
             if canvas.response.clicked() {
@@ -145,7 +153,14 @@ impl Flamegraph {
 
             let child_max_x = max_x.min(child_min_x + (child_value / frame.value) as f32 * length);
 
-            self.draw_one_frame(canvas, child, depth - 1, child_min_x, child_max_x);
+            self.draw_one_frame(
+                canvas,
+                child,
+                depth - 1,
+                child_min_x,
+                child_max_x,
+                root_value,
+            );
 
             child_min_x = child_max_x + FRAME_H_SPACING;
         }
@@ -198,7 +213,6 @@ fn fill_children(
 ) {
     let Some((frame, frames)) = frames.split_once(";") else {
         sf.label = frames.to_string();
-        sf.value += value;
         return;
     };
 
