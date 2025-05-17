@@ -1,6 +1,6 @@
 use eframe::egui::*;
 use egui::ecolor::Hsva;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::hash::{DefaultHasher, Hash, Hasher};
 
 const FRAME_V_SPACING: f32 = 4.0;
@@ -13,10 +13,11 @@ pub struct Options {
 }
 
 #[derive(Clone, Default)]
-pub struct StackFrame {
-    pub label: String,
-    pub value: f64,
-    pub children: BTreeMap<String, StackFrame>,
+struct StackFrame {
+    chain_ids: HashSet<u32>,
+    label: String,
+    value: f64,
+    children: BTreeMap<String, StackFrame>,
 }
 
 struct Canvas {
@@ -28,11 +29,15 @@ struct Canvas {
 
 pub struct Flamegraph {
     options: Options,
+    selected_chain_ids: Vec<u32>,
 }
 
 impl Flamegraph {
     pub fn new<'a>(opts: Options) -> Self {
-        Self { options: opts }
+        Self {
+            options: opts,
+            selected_chain_ids: vec![],
+        }
     }
 
     pub fn show<'a>(&mut self, ui: &mut Ui, frames: impl IntoIterator<Item = &'a str>) {
@@ -87,6 +92,10 @@ impl Flamegraph {
 
         if is_hovered {
             rect_color = saturate(rect_color, 0.3);
+
+            if canvas.response.clicked() {
+                self.selected_chain_ids = frame.chain_ids.iter().copied().collect();
+            }
         };
 
         canvas.painter.rect_filled(rect, 0.0, rect_color);
@@ -109,7 +118,27 @@ impl Flamegraph {
         let mut child_min_x = min_x;
         let length = max_x - min_x;
         for (_, child) in &frame.children {
-            let child_value = frame.value.min(child.value);
+            let mut is_selected = false;
+
+            if !self.selected_chain_ids.is_empty() {
+                if !self
+                    .selected_chain_ids
+                    .iter()
+                    .any(|chain_id| child.chain_ids.contains(chain_id))
+                {
+                    continue;
+                }
+
+                if self.selected_chain_ids.len() == 1 {
+                    is_selected = true;
+                }
+            }
+
+            let child_value = if is_selected {
+                frame.value
+            } else {
+                frame.value.min(child.value)
+            };
 
             let child_max_x = max_x.min(child_min_x + (child_value / frame.value) as f32 * length);
 
@@ -124,33 +153,39 @@ fn build_stackframes<'a>(chains: impl IntoIterator<Item = &'a str>) -> StackFram
     let mut root = StackFrame::default();
     root.label = "all".to_string();
 
-    for chain in chains {
+    for (chain_id, chain) in chains.into_iter().enumerate() {
         let (frames, value) = chain.rsplit_once(" ").unwrap();
         let value = value.parse::<f64>().unwrap();
 
+        root.chain_ids.insert(chain_id as u32);
         root.value += value;
-        fill_children(&mut root, frames, value);
+        fill_children(&mut root, frames, value, chain_id as u32);
     }
 
     root
 }
 
-fn fill_children(sf: &mut StackFrame, frames: &str, value: f64) {
+fn fill_children(sf: &mut StackFrame, frames: &str, value: f64, chain_id: u32) {
     let Some((frame, frames)) = frames.split_once(";") else {
         sf.label = frames.to_string();
         sf.value += value;
         return;
     };
 
-    let next = sf.children.entry(frame.to_string()).or_insert(StackFrame {
-        label: frame.to_string(),
-        value: 0.0,
-        children: Default::default(),
-    });
+    let next = sf
+        .children
+        .entry(frame.to_string())
+        .or_insert_with(|| StackFrame {
+            chain_ids: HashSet::new(),
+            label: frame.to_string(),
+            value: 0.0,
+            children: Default::default(),
+        });
 
+    next.chain_ids.insert(chain_id);
     next.value += value;
 
-    fill_children(next, frames, value);
+    fill_children(next, frames, value, chain_id);
 }
 
 pub fn make_frame_color(value: f64, depth: u32, min_x: f32, max_x: f32) -> Color32 {
