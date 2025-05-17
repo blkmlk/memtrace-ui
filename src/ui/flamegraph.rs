@@ -36,7 +36,11 @@ pub struct FlamegraphPage {
 
 impl FlamegraphPage {
     pub fn new(info: &MemInfo) -> Self {
-        let options = Options { frame_height: 20.0 };
+        let options = Options {
+            frame_height: 20.0,
+            show_info_bar: true,
+        };
+
         let mut lines = Vec::new();
 
         for alloc_info in &info.data.allocation_infos {

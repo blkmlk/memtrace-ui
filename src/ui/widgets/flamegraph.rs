@@ -5,11 +5,13 @@ use std::hash::{DefaultHasher, Hash, Hasher};
 
 const FRAME_V_SPACING: f32 = 4.0;
 const FRAME_H_SPACING: f32 = 4.0;
+const INFO_BAR_HEIGHT: f32 = 40.0;
 const TEXT_HEIGHT: f32 = 15.0;
 
 #[derive(Clone)]
 pub struct Options {
     pub frame_height: f32,
+    pub show_info_bar: bool,
 }
 
 #[derive(Clone, Default)]
@@ -29,6 +31,7 @@ struct Canvas {
 pub struct Flamegraph {
     options: Options,
     selected_chain_ids: HashSet<u32>,
+    info_bar_text: String,
 }
 
 impl Flamegraph {
@@ -36,6 +39,7 @@ impl Flamegraph {
         Self {
             options: opts,
             selected_chain_ids: HashSet::new(),
+            info_bar_text: String::new(),
         }
     }
 
@@ -63,6 +67,9 @@ impl Flamegraph {
         let max_x = canvas.rect.max.x;
 
         self.draw_one_frame(canvas, root, max_depth, min_x, max_x);
+        if self.options.show_info_bar {
+            self.draw_info_bar(canvas, max_depth, min_x, max_x);
+        }
     }
 
     fn draw_one_frame(
@@ -90,6 +97,10 @@ impl Flamegraph {
 
         if is_hovered {
             rect_color = saturate(rect_color, 0.3);
+
+            if self.options.show_info_bar {
+                self.info_bar_text = format!("Function: {}: {}", frame.label, frame.value);
+            }
 
             if canvas.response.clicked() {
                 self.selected_chain_ids = frame.chain_ids.clone();
@@ -145,6 +156,25 @@ impl Flamegraph {
 
             child_min_x = child_max_x + FRAME_H_SPACING;
         }
+    }
+
+    fn draw_info_bar(&mut self, canvas: &Canvas, max_depth: u32, min_x: f32, max_x: f32) {
+        let min_y = canvas.rect.min.y
+            + (max_depth + 1) as f32 * (self.options.frame_height + FRAME_V_SPACING);
+        let max_y = min_y + INFO_BAR_HEIGHT;
+
+        let rect = Rect::from_min_max(pos2(min_x, min_y), pos2(max_x, max_y));
+        let painter = canvas.painter.with_clip_rect(rect.intersect(canvas.rect));
+        painter.rect_filled(rect, 0.0, Color32::from_rgb(224, 255, 230));
+
+        let text_pos = pos2(min_x + 4.0, min_y + 0.5 * (INFO_BAR_HEIGHT - TEXT_HEIGHT));
+        painter.text(
+            text_pos,
+            Align2::LEFT_TOP,
+            &self.info_bar_text,
+            FontId::default(),
+            Color32::BLACK,
+        );
     }
 }
 
