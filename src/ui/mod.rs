@@ -3,6 +3,7 @@ mod helpers;
 mod overview;
 mod widgets;
 
+use crate::ui::flamegraph::FlamegraphPage;
 use common::parser::AccumulatedData;
 use eframe::emath::Align;
 use egui::Layout;
@@ -34,13 +35,17 @@ pub struct MemInfo {
 struct MemgraphApp {
     info: MemInfo,
     current_tab: MainTab,
+    fg_page: FlamegraphPage,
 }
 
 impl MemgraphApp {
     pub fn new(info: MemInfo) -> Self {
+        let fg_page = FlamegraphPage::new(&info);
+
         Self {
             info,
             current_tab: MainTab::Flamegraph,
+            fg_page,
         }
     }
 }
@@ -71,7 +76,7 @@ impl eframe::App for MemgraphApp {
                         ui.label("This is the Charts tab.");
                     }
                     MainTab::Flamegraph => {
-                        flamegraph::show_ui(ui, &self.info);
+                        self.fg_page.show(ui);
                     }
                 }
             });
