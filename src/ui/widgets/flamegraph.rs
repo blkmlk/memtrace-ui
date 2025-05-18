@@ -65,6 +65,11 @@ impl Flamegraph {
         });
     }
 
+    pub fn reset(&mut self) {
+        self.selected_chain_ids.clear();
+        self.info_bar_text.clear();
+    }
+
     fn draw(
         &mut self,
         canvas: &Canvas,

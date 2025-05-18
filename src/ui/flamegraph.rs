@@ -9,7 +9,7 @@ struct Line {
     value: f64,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone, Copy)]
 enum MemoryKind {
     Peak,
     Allocations,
@@ -71,6 +71,8 @@ impl FlamegraphPage {
     }
 
     pub fn show(&mut self, ui: &mut Ui) {
+        let prev_memory_kind = self.memory_kind;
+
         ComboBox::from_label("")
             .selected_text(format!("{:?}", self.memory_kind))
             .show_ui(ui, |ui| {
@@ -83,6 +85,10 @@ impl FlamegraphPage {
                     "Allocations",
                 );
             });
+
+        if prev_memory_kind != self.memory_kind {
+            self.flamegraph.reset();
+        }
 
         ui.add_space(20.0);
 
