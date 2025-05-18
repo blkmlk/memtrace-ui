@@ -12,7 +12,6 @@ const TEXT_HEIGHT: f32 = 15.0;
 pub struct Options {
     pub frame_height: f32,
     pub show_info_bar: bool,
-    pub unit: String,
 }
 
 #[derive(Clone, Default)]
@@ -44,7 +43,7 @@ impl Flamegraph {
         }
     }
 
-    pub fn show<'a>(&mut self, ui: &mut Ui, frames: impl IntoIterator<Item = &'a str>) {
+    pub fn show<'a>(&mut self, ui: &mut Ui, frames: impl IntoIterator<Item = &'a str>, unit: &str) {
         ui.horizontal_centered(|ui| {
             let (root, max_depth) = build_stackframes(frames);
 
@@ -58,16 +57,23 @@ impl Flamegraph {
                     painter: ui.painter_at(rect),
                 };
 
-                self.draw(&canvas, &root, max_depth, root.value);
+                self.draw(&canvas, &root, max_depth, root.value, unit);
             });
         });
     }
 
-    fn draw(&mut self, canvas: &Canvas, root: &StackFrame, max_depth: u32, root_value: f64) {
+    fn draw(
+        &mut self,
+        canvas: &Canvas,
+        root: &StackFrame,
+        max_depth: u32,
+        root_value: f64,
+        unit: &str,
+    ) {
         let min_x = canvas.rect.min.x;
         let max_x = canvas.rect.max.x;
 
-        self.draw_one_frame(canvas, root, max_depth, min_x, max_x, root_value);
+        self.draw_one_frame(canvas, root, max_depth, min_x, max_x, root_value, unit);
 
         if self.options.show_info_bar {
             self.draw_info_bar(canvas, max_depth, min_x, max_x);
@@ -82,6 +88,7 @@ impl Flamegraph {
         min_x: f32,
         max_x: f32,
         root_value: f64,
+        unit: &str,
     ) {
         let min_y =
             canvas.rect.min.y + depth as f32 * (self.options.frame_height + FRAME_V_SPACING);
@@ -106,7 +113,7 @@ impl Flamegraph {
                     "Function: {} ({} {},  {:.2}%)",
                     frame.label,
                     frame.value,
-                    self.options.unit,
+                    unit,
                     (frame.value / root_value) * 100.0
                 );
             }
@@ -160,6 +167,7 @@ impl Flamegraph {
                 child_min_x,
                 child_max_x,
                 root_value,
+                unit,
             );
 
             child_min_x = child_max_x + FRAME_H_SPACING;

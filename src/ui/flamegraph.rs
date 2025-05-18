@@ -1,12 +1,20 @@
 use crate::ui::widgets::flamegraph::{Flamegraph, Options};
 use crate::ui::MemInfo;
-use common::parser::{AccumulatedData, Frame, InstructionPointer};
-use egui::Ui;
+use common::parser::{AccumulatedData, Allocation, Frame, InstructionPointer};
+use egui::{ComboBox, Ui};
 use std::iter;
 
 struct Line {
     frames: Vec<String>,
     value: f64,
+}
+
+#[derive(PartialEq, Debug)]
+enum MemoryKind {
+    Peak,
+    Allocations,
+    Temporary,
+    Leaked,
 }
 
 impl Line {
@@ -30,7 +38,11 @@ impl Line {
 }
 
 pub struct FlamegraphPage {
-    lines: Vec<String>,
+    memory_kind: MemoryKind,
+    peak_frame_lines: Vec<String>,
+    tmp_frame_lines: Vec<String>,
+    allocations_frame_lines: Vec<String>,
+    leaked_frame_lines: Vec<String>,
     flamegraph: Flamegraph,
 }
 
@@ -39,16 +51,71 @@ impl FlamegraphPage {
         let options = Options {
             frame_height: 20.0,
             show_info_bar: true,
-            unit: "bytes".to_string(),
         };
 
+        let fg = Flamegraph::new(options);
+
+        let peak_frame_lines = Self::make_frame_lines(info, |a| a.data.peak as f64);
+        let tmp_frame_lines = Self::make_frame_lines(info, |a| a.data.temporary as f64);
+        let allocations_frame_lines = Self::make_frame_lines(info, |a| a.data.allocations as f64);
+        let leaked_frame_lines = Self::make_frame_lines(info, |a| a.data.leaked as f64);
+
+        Self {
+            memory_kind: MemoryKind::Peak,
+            peak_frame_lines,
+            tmp_frame_lines,
+            allocations_frame_lines,
+            leaked_frame_lines,
+            flamegraph: fg,
+        }
+    }
+
+    pub fn show(&mut self, ui: &mut Ui) {
+        ComboBox::from_label("")
+            .selected_text(format!("{:?}", self.memory_kind))
+            .show_ui(ui, |ui| {
+                ui.selectable_value(&mut self.memory_kind, MemoryKind::Peak, "Peak");
+                ui.selectable_value(&mut self.memory_kind, MemoryKind::Temporary, "Temporary");
+                ui.selectable_value(&mut self.memory_kind, MemoryKind::Leaked, "Leaked");
+                ui.selectable_value(
+                    &mut self.memory_kind,
+                    MemoryKind::Allocations,
+                    "Allocations",
+                );
+            });
+
+        ui.add_space(20.0);
+
+        match self.memory_kind {
+            MemoryKind::Peak => {
+                let frames = self.peak_frame_lines.iter().map(|v| v.as_str());
+                self.flamegraph.show(ui, frames, "bytes");
+            }
+            MemoryKind::Temporary => {
+                let frames = self.tmp_frame_lines.iter().map(|v| v.as_str());
+                self.flamegraph.show(ui, frames, "bytes");
+            }
+            MemoryKind::Leaked => {
+                let frames = self.leaked_frame_lines.iter().map(|v| v.as_str());
+                self.flamegraph.show(ui, frames, "bytes");
+            }
+            MemoryKind::Allocations => {
+                let frames = self.allocations_frame_lines.iter().map(|v| v.as_str());
+                self.flamegraph.show(ui, frames, "");
+            }
+        }
+    }
+
+    fn make_frame_lines(info: &MemInfo, f: impl Fn(&Allocation) -> f64) -> Vec<String> {
         let mut lines = Vec::new();
 
         for alloc_info in &info.data.allocation_infos {
             let allocation = &info.data.allocations[alloc_info.allocation_idx as usize];
             let mut trace_idx = allocation.trace_idx;
 
-            let mut line = Line::new(alloc_info.size as f64);
+            let value = f(allocation);
+            let mut line = Line::new(value);
+
             while trace_idx != 0 {
                 let trace = &info.data.traces[trace_idx as usize - 1];
                 let ip_info = &info.data.instruction_pointers[trace.ip_idx as usize - 1];
@@ -61,18 +128,7 @@ impl FlamegraphPage {
             lines.push(line.into_string());
         }
 
-        let fg = Flamegraph::new(options);
-
-        Self {
-            lines,
-            flamegraph: fg,
-        }
-    }
-
-    pub fn show(&mut self, ui: &mut Ui) {
-        let frames = self.lines.iter().map(|v| v.as_str());
-
-        self.flamegraph.show(ui, frames);
+        lines
     }
 }
 
