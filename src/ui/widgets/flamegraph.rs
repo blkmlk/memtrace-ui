@@ -23,6 +23,7 @@ struct StackFrame {
 }
 
 struct Canvas {
+    ctx: Context,
     response: Response,
     rect: Rect,
     painter: Painter,
@@ -48,10 +49,12 @@ impl Flamegraph {
             let (root, max_depth) = build_stackframes(frames);
 
             Frame::canvas(ui.style()).show(ui, |ui| {
+                let ctx = ui.ctx().clone();
                 let rect = ui.available_rect_before_wrap();
                 let response = ui.interact(rect, ui.id().with("canvas"), Sense::click_and_drag());
 
                 let canvas = Canvas {
+                    ctx,
                     response,
                     rect,
                     painter: ui.painter_at(rect),
@@ -110,7 +113,7 @@ impl Flamegraph {
 
             if self.options.show_info_bar {
                 self.info_bar_text = format!(
-                    "Function: {} ({} {},  {:.2}%)",
+                    "{} ({} {},  {:.2}%)",
                     frame.label,
                     frame.value,
                     unit,
@@ -187,7 +190,7 @@ impl Flamegraph {
         painter.text(
             text_pos,
             Align2::LEFT_TOP,
-            &self.info_bar_text,
+            format!("Function: {}", self.info_bar_text),
             FontId::default(),
             Color32::BLACK,
         );
