@@ -11,7 +11,6 @@ const TEXT_HEIGHT: f32 = 15.0;
 #[derive(Clone)]
 pub struct Options {
     pub frame_height: f32,
-    pub show_info_bar: bool,
 }
 
 #[derive(Clone, Default)]
@@ -83,9 +82,7 @@ impl Flamegraph {
 
         self.draw_one_frame(canvas, root, max_depth, min_x, max_x, root_value, unit);
 
-        if self.options.show_info_bar {
-            self.draw_info_bar(canvas, max_depth, min_x, max_x);
-        }
+        self.draw_info_bar(canvas, max_depth, min_x, max_x);
     }
 
     fn draw_one_frame(
@@ -116,15 +113,13 @@ impl Flamegraph {
         if is_hovered {
             rect_color = saturate(rect_color, 0.3);
 
-            if self.options.show_info_bar {
-                self.info_bar_text = format!(
-                    "{} ({} {},  {:.2}%)",
-                    frame.label,
-                    frame.value,
-                    unit,
-                    (frame.value / root_value) * 100.0
-                );
-            }
+            self.info_bar_text = format!(
+                "{} ({} {},  {:.2}%)",
+                frame.label,
+                frame.value,
+                unit,
+                (frame.value / root_value) * 100.0
+            );
 
             if canvas.response.clicked() {
                 self.selected_chain_ids = frame.chain_ids.clone();

@@ -48,10 +48,7 @@ pub struct FlamegraphPage {
 
 impl FlamegraphPage {
     pub fn new(info: &MemInfo) -> Self {
-        let options = Options {
-            frame_height: 20.0,
-            show_info_bar: true,
-        };
+        let options = Options { frame_height: 20.0 };
 
         let fg = Flamegraph::new(options);
 
