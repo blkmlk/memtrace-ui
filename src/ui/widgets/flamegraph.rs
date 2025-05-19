@@ -151,6 +151,10 @@ impl Flamegraph {
         let mut child_min_x = min_x;
         let length = max_x - min_x;
         for (_, child) in &frame.children {
+            if child.value == 0.0 {
+                continue;
+            }
+
             let mut is_selected = false;
 
             if child.chain_ids.len() == self.selected_chain_ids.len() {
