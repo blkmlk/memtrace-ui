@@ -97,13 +97,13 @@ impl FlamegraphPage {
                 let frames = self.peak_frame_lines.iter().map(|v| v.as_str());
                 self.flamegraph.show(ui, frames, "bytes");
             }
-            MemoryKind::Temporary => {
-                let frames = self.tmp_frame_lines.iter().map(|v| v.as_str());
-                self.flamegraph.show(ui, frames, "bytes");
-            }
             MemoryKind::Leaked => {
                 let frames = self.leaked_frame_lines.iter().map(|v| v.as_str());
                 self.flamegraph.show(ui, frames, "bytes");
+            }
+            MemoryKind::Temporary => {
+                let frames = self.tmp_frame_lines.iter().map(|v| v.as_str());
+                self.flamegraph.show(ui, frames, "");
             }
             MemoryKind::Allocations => {
                 let frames = self.allocations_frame_lines.iter().map(|v| v.as_str());
