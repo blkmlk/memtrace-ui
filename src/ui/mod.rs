@@ -1,9 +1,11 @@
 mod flamegraph;
 mod helpers;
 mod overview;
+mod topdown;
 mod widgets;
 
 use crate::ui::flamegraph::FlamegraphPage;
+use crate::ui::topdown::TopDown;
 use common::parser::AccumulatedData;
 use eframe::emath::Align;
 use egui::Layout;
@@ -23,6 +25,7 @@ pub fn run_ui(data: MemInfo) -> eframe::Result {
 #[derive(PartialEq, Debug)]
 enum MainTab {
     Overview,
+    TopDown,
     Charts,
     Flamegraph,
 }
@@ -36,6 +39,7 @@ struct MemgraphApp {
     info: MemInfo,
     current_tab: MainTab,
     fg_page: FlamegraphPage,
+    top_down: TopDown,
 }
 
 impl MemgraphApp {
@@ -43,8 +47,9 @@ impl MemgraphApp {
         let fg_page = FlamegraphPage::new(&info);
 
         Self {
+            top_down: TopDown::new(&info),
             info,
-            current_tab: MainTab::Flamegraph,
+            current_tab: MainTab::TopDown,
             fg_page,
         }
     }
@@ -55,7 +60,12 @@ impl eframe::App for MemgraphApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.with_layout(Layout::top_down_justified(Align::Center), |ui| {
                 ui.horizontal(|ui| {
-                    for tab in [MainTab::Overview, MainTab::Charts, MainTab::Flamegraph] {
+                    for tab in [
+                        MainTab::Overview,
+                        MainTab::TopDown,
+                        MainTab::Flamegraph,
+                        MainTab::Charts,
+                    ] {
                         let selected = self.current_tab == tab;
                         if ui
                             .selectable_label(selected, format!("{:?}", tab))
@@ -72,11 +82,14 @@ impl eframe::App for MemgraphApp {
                     MainTab::Overview => {
                         overview::show(ui, &self.info);
                     }
-                    MainTab::Charts => {
-                        ui.label("This is the Charts tab.");
+                    MainTab::TopDown => {
+                        self.top_down.show(ui);
                     }
                     MainTab::Flamegraph => {
                         self.fg_page.show(ui);
+                    }
+                    MainTab::Charts => {
+                        ui.label("This is the Charts tab.");
                     }
                 }
             });

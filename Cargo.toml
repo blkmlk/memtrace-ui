@@ -12,6 +12,7 @@ anyhow = "1.0.98"
 reqwest = { version = "0.12.15", features = ["blocking"] }
 bytesize = "2.0.1"
 itertools = "0.14.0"
+egui_ltreeview = "0.2.0"
 
 [dependencies.common]
 git = "https://github.com/blkmlk/memtrack-rs"
