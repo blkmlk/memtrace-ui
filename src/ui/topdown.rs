@@ -1,5 +1,4 @@
 use crate::ui::MemInfo;
-use common::parser::{AccumulatedData, InstructionPointer};
 use egui::*;
 use egui_ltreeview::TreeView;
 use std::collections::BTreeMap;
@@ -12,6 +11,7 @@ pub struct TopDown {
     root_stack_dir: StackDir,
 }
 
+#[derive(Debug)]
 struct StackDir {
     name: String,
     file_name: String,
@@ -22,6 +22,9 @@ struct StackDir {
 impl TopDown {
     pub fn new(info: &MemInfo) -> Self {
         let root_stack_dir = make_stack_dirs(info);
+
+        println!("dirs: {:#?}", root_stack_dir);
+
         Self {
             panel_width: MIN_PANEL_WIDTH,
             root_stack_dir,
@@ -87,32 +90,54 @@ fn make_stack_dirs(info: &MemInfo) -> StackDir {
         children: BTreeMap::new(),
     };
 
+    let mut ip_idxs = vec![];
     for alloc_info in &info.data.allocation_infos {
         let allocation = &info.data.allocations[alloc_info.allocation_idx as usize];
-        let mut trace_idx = allocation.trace_idx;
 
-        let mut current = &mut root;
+        let mut trace_idx = allocation.trace_idx;
+        ip_idxs.clear();
         while trace_idx != 0 {
             let trace = &info.data.traces[trace_idx as usize - 1];
-            let ip_info = &info.data.instruction_pointers[trace.ip_idx as usize - 1];
-
-            let frames = get_frames_from_ip_info(&info.data, ip_info);
-
+            ip_idxs.push(trace.ip_idx);
             trace_idx = trace.parent_idx;
         }
-    }
-    todo!()
-}
 
-fn get_frames_from_ip_info(data: &AccumulatedData, ip_info: &InstructionPointer) -> Vec<String> {
-    iter::once(&ip_info.frame)
-        .chain(&ip_info.inlined)
-        .map(|frame| {
-            let function_idx = match frame {
-                common::parser::Frame::Single { function_idx } => function_idx,
-                common::parser::Frame::Multiple { function_idx, .. } => function_idx,
-            };
-            data.strings[function_idx - 1].clone()
-        })
-        .collect()
+        let mut current = &mut root;
+        for ip_idx in ip_idxs.iter().rev() {
+            let ip_info = &info.data.instruction_pointers[*ip_idx as usize - 1];
+
+            for frame in ip_info.inlined.iter().chain(iter::once(&ip_info.frame)) {
+                let (fn_idx, file_idx, ln) = match frame {
+                    common::parser::Frame::Single { function_idx } => (function_idx, &0, &0),
+                    common::parser::Frame::Multiple {
+                        function_idx,
+                        file_idx,
+                        line_number,
+                    } => (function_idx, file_idx, line_number),
+                };
+
+                let key = format!("{}:{}:{}", info.data.strings[fn_idx - 1], file_idx, ln);
+                // println!("key: {}", key);
+
+                let child = current.children.entry(key).or_insert_with(|| {
+                    let file_name = if *file_idx == 0 {
+                        "".to_string()
+                    } else {
+                        info.data.strings[file_idx - 1].clone()
+                    };
+
+                    StackDir {
+                        name: info.data.strings[fn_idx - 1].clone(),
+                        file_name,
+                        line_number: *ln,
+                        children: BTreeMap::new(),
+                    }
+                });
+
+                current = child;
+            }
+        }
+    }
+
+    root
 }
