@@ -1,32 +1,38 @@
 use crate::ui::MemInfo;
 use egui::*;
-use egui_ltreeview::{NodeBuilder, TreeView, TreeViewBuilder, TreeViewState};
-use std::collections::BTreeMap;
+use egui_ltreeview::{Action, NodeBuilder, TreeView, TreeViewBuilder};
+use std::collections::{BTreeMap, HashMap};
 use std::iter;
 
-const MIN_PANEL_WIDTH: f32 = 200.0;
+const MIN_PANEL_WIDTH: f32 = 500.0;
+
+#[derive(Debug, Clone)]
+struct StackDir {
+    id: u32,
+    name: String,
+    children: BTreeMap<String, StackDir>,
+}
+
+#[derive(Default)]
+struct StackFileInfo {
+    file_name: String,
+    line_number: u32,
+}
 
 pub struct TopDown {
     panel_width: f32,
     root_stack_dir: StackDir,
-}
-
-#[derive(Debug)]
-struct StackDir {
-    id: u32,
-    name: String,
-    file_name: String,
-    line_number: u32,
-    children: BTreeMap<String, StackDir>,
+    file_info_by_id: HashMap<u32, StackFileInfo>,
 }
 
 impl TopDown {
     pub fn new(info: &MemInfo) -> Self {
-        let root_stack_dir = make_stack_dirs(info);
+        let (root_stack_dir, file_info_by_id) = make_stack_dirs(info);
 
         Self {
             panel_width: MIN_PANEL_WIDTH,
             root_stack_dir,
+            file_info_by_id,
         }
     }
 
@@ -37,15 +43,27 @@ impl TopDown {
         ui.horizontal(|ui| {
             ui.horizontal(|ui| {
                 let id = ui.make_persistent_id("left_panel");
-                let mut state = TreeViewState::default();
 
-                TreeView::new(id)
+                let (_, actions) = TreeView::new(id)
                     .max_width(self.panel_width)
                     .max_height(available_height)
                     .allow_multi_selection(false)
-                    .show_state(ui, &mut state, |view| {
+                    .show(ui, |view| {
                         self.show_dir(view, &self.root_stack_dir);
                     });
+
+                for action in actions {
+                    match action {
+                        Action::SetSelected(ids) => {
+                            assert_eq!(ids.len(), 1);
+                            let info = self.file_info_by_id.get(&ids[0]).unwrap();
+                            println!("selected: {}:{}", info.file_name, info.line_number);
+                        }
+                        Action::Move(_) => {}
+                        Action::Drag(_) => {}
+                        Action::Activate(_) => {}
+                    }
+                }
             });
 
             let separator_response = ui
@@ -97,16 +115,16 @@ impl TopDown {
     }
 }
 
-fn make_stack_dirs(info: &MemInfo) -> StackDir {
+fn make_stack_dirs(info: &MemInfo) -> (StackDir, HashMap<u32, StackFileInfo>) {
     let mut global_id = 0;
+    let mut mapped = HashMap::new();
 
     let mut root = StackDir {
         id: global_id,
         name: "all".to_string(),
-        file_name: "".to_string(),
-        line_number: 0,
         children: BTreeMap::new(),
     };
+    mapped.insert(global_id, StackFileInfo::default());
 
     let mut ip_idxs = vec![];
     for alloc_info in &info.data.allocation_infos {
@@ -148,13 +166,21 @@ fn make_stack_dirs(info: &MemInfo) -> StackDir {
 
                     global_id += 1;
 
-                    StackDir {
+                    let dir = StackDir {
                         id: global_id,
                         name: info.data.strings[fn_idx - 1].clone(),
-                        file_name,
-                        line_number: parent_ln,
                         children: BTreeMap::new(),
-                    }
+                    };
+
+                    mapped.insert(
+                        dir.id,
+                        StackFileInfo {
+                            file_name,
+                            line_number: parent_ln,
+                        },
+                    );
+
+                    dir
                 });
 
                 parent_file_idx = *file_idx;
@@ -165,5 +191,5 @@ fn make_stack_dirs(info: &MemInfo) -> StackDir {
         }
     }
 
-    root
+    (root, mapped)
 }
