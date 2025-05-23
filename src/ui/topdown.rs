@@ -1,6 +1,6 @@
 use crate::ui::MemInfo;
 use egui::*;
-use egui_ltreeview::TreeView;
+use egui_ltreeview::{NodeBuilder, TreeView, TreeViewBuilder, TreeViewState};
 use std::collections::BTreeMap;
 use std::iter;
 
@@ -13,6 +13,7 @@ pub struct TopDown {
 
 #[derive(Debug)]
 struct StackDir {
+    id: u32,
     name: String,
     file_name: String,
     line_number: u32,
@@ -22,8 +23,6 @@ struct StackDir {
 impl TopDown {
     pub fn new(info: &MemInfo) -> Self {
         let root_stack_dir = make_stack_dirs(info);
-
-        println!("dirs: {:#?}", root_stack_dir);
 
         Self {
             panel_width: MIN_PANEL_WIDTH,
@@ -38,15 +37,14 @@ impl TopDown {
         ui.horizontal(|ui| {
             ui.horizontal(|ui| {
                 let id = ui.make_persistent_id("left_panel");
+                let mut state = TreeViewState::default();
+
                 TreeView::new(id)
                     .max_width(self.panel_width)
                     .max_height(available_height)
                     .allow_multi_selection(false)
-                    .show(ui, |view| {
-                        view.dir(0, "l1");
-                        view.leaf(1, "l2");
-                        view.leaf(2, "l3");
-                        view.leaf(3, "l4");
+                    .show_state(ui, &mut state, |view| {
+                        self.show_dir(view, &self.root_stack_dir);
                     });
             });
 
@@ -80,10 +78,30 @@ impl TopDown {
             });
         });
     }
+
+    fn show_dir(&self, view: &mut TreeViewBuilder<u32>, dir: &StackDir) {
+        if dir.children.is_empty() {
+            view.leaf(dir.id, &dir.name);
+        } else {
+            view.node(
+                NodeBuilder::dir(dir.id)
+                    .label(&dir.name)
+                    .default_open(false)
+                    .activatable(true),
+            );
+            for child in dir.children.values() {
+                self.show_dir(view, child);
+            }
+            view.close_dir()
+        }
+    }
 }
 
 fn make_stack_dirs(info: &MemInfo) -> StackDir {
+    let mut global_id = 0;
+
     let mut root = StackDir {
+        id: global_id,
         name: "all".to_string(),
         file_name: "".to_string(),
         line_number: 0,
@@ -103,6 +121,9 @@ fn make_stack_dirs(info: &MemInfo) -> StackDir {
         }
 
         let mut current = &mut root;
+
+        let mut parent_file_idx = 0;
+        let mut parent_ln = 0;
         for ip_idx in ip_idxs.iter().rev() {
             let ip_info = &info.data.instruction_pointers[*ip_idx as usize - 1];
 
@@ -116,23 +137,28 @@ fn make_stack_dirs(info: &MemInfo) -> StackDir {
                     } => (function_idx, file_idx, line_number),
                 };
 
-                let key = format!("{}:{}:{}", info.data.strings[fn_idx - 1], file_idx, ln);
-                // println!("key: {}", key);
+                let key = format!("{}:{}:{}", fn_idx, parent_file_idx, parent_ln);
 
                 let child = current.children.entry(key).or_insert_with(|| {
-                    let file_name = if *file_idx == 0 {
-                        "".to_string()
+                    let file_name = if parent_file_idx == 0 {
+                        String::new()
                     } else {
-                        info.data.strings[file_idx - 1].clone()
+                        info.data.strings[parent_file_idx - 1].clone()
                     };
 
+                    global_id += 1;
+
                     StackDir {
+                        id: global_id,
                         name: info.data.strings[fn_idx - 1].clone(),
                         file_name,
-                        line_number: *ln,
+                        line_number: parent_ln,
                         children: BTreeMap::new(),
                     }
                 });
+
+                parent_file_idx = *file_idx;
+                parent_ln = *ln;
 
                 current = child;
             }

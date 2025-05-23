@@ -15,4 +15,5 @@ itertools = "0.14.0"
 egui_ltreeview = "0.2.0"
 
 [dependencies.common]
-git = "https://github.com/blkmlk/memtrack-rs"
+#git = "https://github.com/blkmlk/memtrack-rs"
+path = "../memtrack-rs/common"
