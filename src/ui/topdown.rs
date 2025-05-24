@@ -7,23 +7,24 @@ use std::{fs, iter};
 const MIN_PANEL_WIDTH: f32 = 500.0;
 
 #[derive(Debug, Clone)]
-struct StackDir {
-    id: u32,
-    name: String,
-    children: BTreeMap<String, StackDir>,
+struct StackNode {
+    info: StackInfo,
+    children: BTreeMap<String, StackNode>,
 }
 
-#[derive(Default, Clone)]
-struct StackFileInfo {
+#[derive(Debug, Clone, Default)]
+struct StackInfo {
+    id: u32,
+    name: String,
     file_name: String,
     line_number: u32,
 }
 
 pub struct TopDown {
     panel_width: f32,
-    root_stack_dir: StackDir,
-    file_info_by_id: HashMap<u32, StackFileInfo>,
-    selected_file_info: Option<StackFileInfo>,
+    root_node: StackNode,
+    stack_info_by_id: HashMap<u32, StackInfo>,
+    selected_stack_info_id: u32,
     code_loader: CodeLoader,
 }
 
@@ -33,9 +34,9 @@ impl TopDown {
 
         Self {
             panel_width: MIN_PANEL_WIDTH,
-            root_stack_dir,
-            file_info_by_id,
-            selected_file_info: None,
+            root_node: root_stack_dir,
+            stack_info_by_id: file_info_by_id,
+            selected_stack_info_id: 0,
             code_loader: CodeLoader::new(),
         }
     }
@@ -44,6 +45,9 @@ impl TopDown {
         let available_height = ui.available_height();
         let max_width = ui.available_width() / 2.0;
         let max_height = ui.available_height();
+
+        let style = ui.style();
+        let font_size = style.text_styles.get(&TextStyle::Body).unwrap().size;
 
         ui.horizontal(|ui| {
             ui.horizontal(|ui| {
@@ -54,15 +58,15 @@ impl TopDown {
                     .max_height(available_height)
                     .allow_multi_selection(false)
                     .show(ui, |view| {
-                        self.show_dir(view, &self.root_stack_dir);
+                        self.show_node(view, &self.root_node);
                     });
 
                 for action in actions {
                     match action {
                         Action::SetSelected(ids) => {
                             assert_eq!(ids.len(), 1);
-                            let info = self.file_info_by_id.get(&ids[0]).unwrap();
-                            self.selected_file_info = Some(info.clone());
+                            let info = self.stack_info_by_id.get(&ids[0]).unwrap();
+                            self.selected_stack_info_id = info.id;
                         }
                         Action::Move(_) => {}
                         Action::Drag(_) => {}
@@ -97,49 +101,49 @@ impl TopDown {
             }
 
             ui.vertical(|ui| {
-                if let Some(file_info) = &self.selected_file_info {
-                    if !file_info.file_name.is_empty() {
-                        if let Some(code) = self.code_loader.get(
-                            &file_info.file_name,
-                            file_info.line_number,
-                            max_height as u32,
-                        ) {
-                            ui.code(code);
-                        };
-                    }
-                }
+                let info = self
+                    .stack_info_by_id
+                    .get(&self.selected_stack_info_id)
+                    .unwrap();
+
+                let offset = (max_height / font_size) as u32;
+                self.code_loader.show(ui, info, offset);
             });
         });
     }
 
-    fn show_dir(&self, view: &mut TreeViewBuilder<u32>, dir: &StackDir) {
-        if dir.children.is_empty() {
-            view.leaf(dir.id, &dir.name);
+    fn show_node(&self, view: &mut TreeViewBuilder<u32>, node: &StackNode) {
+        if node.children.is_empty() {
+            view.leaf(node.info.id, &node.info.name);
         } else {
             view.node(
-                NodeBuilder::dir(dir.id)
-                    .label(&dir.name)
+                NodeBuilder::dir(node.info.id)
+                    .label(&node.info.name)
                     .default_open(false)
                     .activatable(true),
             );
-            for child in dir.children.values() {
-                self.show_dir(view, child);
+            for child in node.children.values() {
+                self.show_node(view, child);
             }
             view.close_dir()
         }
     }
 }
 
-fn make_stack_dirs(info: &MemInfo) -> (StackDir, HashMap<u32, StackFileInfo>) {
+fn make_stack_dirs(info: &MemInfo) -> (StackNode, HashMap<u32, StackInfo>) {
     let mut global_id = 0;
     let mut mapped = HashMap::new();
 
-    let mut root = StackDir {
-        id: global_id,
+    let root_info = StackInfo {
         name: "all".to_string(),
+        ..Default::default()
+    };
+
+    let mut root = StackNode {
+        info: root_info.clone(),
         children: BTreeMap::new(),
     };
-    mapped.insert(global_id, StackFileInfo::default());
+    mapped.insert(global_id, root_info);
 
     let mut ip_idxs = vec![];
     for alloc_info in &info.data.allocation_infos {
@@ -181,21 +185,21 @@ fn make_stack_dirs(info: &MemInfo) -> (StackDir, HashMap<u32, StackFileInfo>) {
 
                     global_id += 1;
 
-                    let dir = StackDir {
+                    let info = StackInfo {
                         id: global_id,
                         name: info.data.strings[fn_idx - 1].clone(),
+                        file_name,
+                        line_number: parent_ln,
+                    };
+
+                    let node = StackNode {
+                        info: info.clone(),
                         children: BTreeMap::new(),
                     };
 
-                    mapped.insert(
-                        dir.id,
-                        StackFileInfo {
-                            file_name,
-                            line_number: parent_ln,
-                        },
-                    );
+                    mapped.insert(node.info.id, info);
 
-                    dir
+                    node
                 });
 
                 parent_file_idx = *file_idx;
@@ -220,26 +224,37 @@ impl CodeLoader {
         }
     }
 
-    pub fn get(&mut self, path: &str, line_number: u32, offset: u32) -> Option<String> {
-        if !self.mapped.contains_key(path) {
-            let Ok(code) = fs::read_to_string(path) else {
-                return None;
+    pub fn show(&mut self, ui: &mut Ui, stack_info: &StackInfo, offset: u32) {
+        if !self.mapped.contains_key(&stack_info.file_name) {
+            let Ok(code) = fs::read_to_string(&stack_info.file_name) else {
+                return;
             };
-            self.mapped.insert(path.to_string(), code);
+            self.mapped.insert(stack_info.file_name.to_string(), code);
         };
 
-        let code = self.mapped.get(path).unwrap();
+        let code = self.mapped.get(&stack_info.file_name).unwrap();
 
-        let min_offset = line_number.saturating_sub(offset) as usize;
-        let max_offset = (line_number + offset) as usize;
+        let min_offset = stack_info.line_number.saturating_sub(offset / 2) as usize;
+        let max_offset = (stack_info.line_number + offset / 2) as usize;
 
-        Some(
-            code.lines()
-                .enumerate()
-                .filter(|(i, _)| *i + 1 >= min_offset && *i + 1 <= max_offset)
-                .map(|(_, line)| line)
-                .collect::<Vec<_>>()
-                .join("\n"),
-        )
+        let lines = code
+            .lines()
+            .enumerate()
+            .filter(|(i, _)| *i + 1 >= min_offset && *i + 1 <= max_offset);
+
+        for (i, line) in lines {
+            let number = (i + 1) as u32;
+            if number == stack_info.line_number {
+                Grid::new("target_line")
+                    .striped(true)
+                    .num_columns(2)
+                    .show(ui, |ui| {
+                        ui.code(line);
+                        ui.heading("Allocation");
+                    });
+            } else {
+                ui.code(line);
+            }
+        }
     }
 }
