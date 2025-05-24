@@ -1,14 +1,18 @@
 use crate::ui::MemInfo;
+use bytesize::ByteSize;
 use egui::*;
 use egui_ltreeview::{Action, NodeBuilder, TreeView, TreeViewBuilder};
+use std::cell::RefCell;
 use std::collections::{BTreeMap, HashMap};
+use std::ops::Deref;
+use std::rc::Rc;
 use std::{fs, iter};
 
 const MIN_PANEL_WIDTH: f32 = 500.0;
 
 #[derive(Debug, Clone)]
 struct StackNode {
-    info: StackInfo,
+    info: Rc<RefCell<StackInfo>>,
     children: BTreeMap<String, StackNode>,
 }
 
@@ -18,12 +22,16 @@ struct StackInfo {
     name: String,
     file_name: String,
     line_number: u32,
+    peaked: u64,
+    leaked: u64,
+    allocations: u64,
+    temporary: u64,
 }
 
 pub struct TopDown {
     panel_width: f32,
     root_node: StackNode,
-    stack_info_by_id: HashMap<u32, StackInfo>,
+    stack_info_by_id: HashMap<u32, Rc<RefCell<StackInfo>>>,
     selected_stack_info_id: u32,
     code_loader: CodeLoader,
 }
@@ -66,7 +74,7 @@ impl TopDown {
                         Action::SetSelected(ids) => {
                             assert_eq!(ids.len(), 1);
                             let info = self.stack_info_by_id.get(&ids[0]).unwrap();
-                            self.selected_stack_info_id = info.id;
+                            self.selected_stack_info_id = info.borrow().id;
                         }
                         Action::Move(_) => {}
                         Action::Drag(_) => {}
@@ -107,18 +115,18 @@ impl TopDown {
                     .unwrap();
 
                 let offset = (max_height / font_size) as u32;
-                self.code_loader.show(ui, info, offset);
+                self.code_loader.show(ui, info.borrow(), offset);
             });
         });
     }
 
     fn show_node(&self, view: &mut TreeViewBuilder<u32>, node: &StackNode) {
         if node.children.is_empty() {
-            view.leaf(node.info.id, &node.info.name);
+            view.leaf(node.info.borrow().id, &node.info.borrow().name);
         } else {
             view.node(
-                NodeBuilder::dir(node.info.id)
-                    .label(&node.info.name)
+                NodeBuilder::dir(node.info.borrow().id)
+                    .label(&node.info.borrow().name)
                     .default_open(false)
                     .activatable(true),
             );
@@ -130,14 +138,14 @@ impl TopDown {
     }
 }
 
-fn make_stack_dirs(info: &MemInfo) -> (StackNode, HashMap<u32, StackInfo>) {
+fn make_stack_dirs(info: &MemInfo) -> (StackNode, HashMap<u32, Rc<RefCell<StackInfo>>>) {
     let mut global_id = 0;
     let mut mapped = HashMap::new();
 
-    let root_info = StackInfo {
+    let root_info = Rc::new(RefCell::new(StackInfo {
         name: "all".to_string(),
         ..Default::default()
-    };
+    }));
 
     let mut root = StackNode {
         info: root_info.clone(),
@@ -185,22 +193,31 @@ fn make_stack_dirs(info: &MemInfo) -> (StackNode, HashMap<u32, StackInfo>) {
 
                     global_id += 1;
 
-                    let info = StackInfo {
+                    let info = Rc::new(RefCell::new(StackInfo {
                         id: global_id,
                         name: info.data.strings[fn_idx - 1].clone(),
                         file_name,
                         line_number: parent_ln,
-                    };
+                        ..Default::default()
+                    }));
 
                     let node = StackNode {
                         info: info.clone(),
                         children: BTreeMap::new(),
                     };
 
-                    mapped.insert(node.info.id, info);
+                    mapped.insert(node.info.borrow().id, info);
 
                     node
                 });
+
+                {
+                    let mut info = child.info.borrow_mut();
+                    info.peaked += allocation.data.peak;
+                    info.leaked += allocation.data.leaked;
+                    info.allocations += allocation.data.allocations;
+                    info.temporary += allocation.data.temporary;
+                }
 
                 parent_file_idx = *file_idx;
                 parent_ln = *ln;
@@ -224,7 +241,7 @@ impl CodeLoader {
         }
     }
 
-    pub fn show(&mut self, ui: &mut Ui, stack_info: &StackInfo, offset: u32) {
+    pub fn show(&mut self, ui: &mut Ui, stack_info: impl Deref<Target = StackInfo>, offset: u32) {
         if !self.mapped.contains_key(&stack_info.file_name) {
             let Ok(code) = fs::read_to_string(&stack_info.file_name) else {
                 return;
@@ -250,7 +267,7 @@ impl CodeLoader {
                     .num_columns(2)
                     .show(ui, |ui| {
                         ui.code(line);
-                        ui.heading("Allocation");
+                        ui.heading(ByteSize::b(stack_info.peaked).to_string());
                     });
             } else {
                 ui.code(line);
