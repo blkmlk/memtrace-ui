@@ -2,7 +2,7 @@ use crate::ui::MemInfo;
 use egui::*;
 use egui_ltreeview::{Action, NodeBuilder, TreeView, TreeViewBuilder};
 use std::collections::{BTreeMap, HashMap};
-use std::iter;
+use std::{fs, iter};
 
 const MIN_PANEL_WIDTH: f32 = 500.0;
 
@@ -13,7 +13,7 @@ struct StackDir {
     children: BTreeMap<String, StackDir>,
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 struct StackFileInfo {
     file_name: String,
     line_number: u32,
@@ -23,6 +23,8 @@ pub struct TopDown {
     panel_width: f32,
     root_stack_dir: StackDir,
     file_info_by_id: HashMap<u32, StackFileInfo>,
+    selected_file_info: Option<StackFileInfo>,
+    code_loader: CodeLoader,
 }
 
 impl TopDown {
@@ -33,12 +35,15 @@ impl TopDown {
             panel_width: MIN_PANEL_WIDTH,
             root_stack_dir,
             file_info_by_id,
+            selected_file_info: None,
+            code_loader: CodeLoader::new(),
         }
     }
 
     pub fn show(&mut self, ui: &mut Ui) {
         let available_height = ui.available_height();
         let max_width = ui.available_width() / 2.0;
+        let max_height = ui.available_height();
 
         ui.horizontal(|ui| {
             ui.horizontal(|ui| {
@@ -57,7 +62,7 @@ impl TopDown {
                         Action::SetSelected(ids) => {
                             assert_eq!(ids.len(), 1);
                             let info = self.file_info_by_id.get(&ids[0]).unwrap();
-                            println!("selected: {}:{}", info.file_name, info.line_number);
+                            self.selected_file_info = Some(info.clone());
                         }
                         Action::Move(_) => {}
                         Action::Drag(_) => {}
@@ -92,7 +97,17 @@ impl TopDown {
             }
 
             ui.vertical(|ui| {
-                ui.label("Main content area");
+                if let Some(file_info) = &self.selected_file_info {
+                    if !file_info.file_name.is_empty() {
+                        if let Some(code) = self.code_loader.get(
+                            &file_info.file_name,
+                            file_info.line_number,
+                            max_height as u32,
+                        ) {
+                            ui.code(code);
+                        };
+                    }
+                }
             });
         });
     }
@@ -192,4 +207,39 @@ fn make_stack_dirs(info: &MemInfo) -> (StackDir, HashMap<u32, StackFileInfo>) {
     }
 
     (root, mapped)
+}
+
+struct CodeLoader {
+    mapped: HashMap<String, String>,
+}
+
+impl CodeLoader {
+    pub fn new() -> Self {
+        Self {
+            mapped: HashMap::new(),
+        }
+    }
+
+    pub fn get(&mut self, path: &str, line_number: u32, offset: u32) -> Option<String> {
+        if !self.mapped.contains_key(path) {
+            let Ok(code) = fs::read_to_string(path) else {
+                return None;
+            };
+            self.mapped.insert(path.to_string(), code);
+        };
+
+        let code = self.mapped.get(path).unwrap();
+
+        let min_offset = line_number.saturating_sub(offset) as usize;
+        let max_offset = (line_number + offset) as usize;
+
+        Some(
+            code.lines()
+                .enumerate()
+                .filter(|(i, _)| *i + 1 >= min_offset && *i + 1 <= max_offset)
+                .map(|(_, line)| line)
+                .collect::<Vec<_>>()
+                .join("\n"),
+        )
+    }
 }

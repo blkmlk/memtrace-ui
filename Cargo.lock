@@ -780,6 +780,7 @@ dependencies = [
 [[package]]
 name = "common"
 version = "0.1.0"
+source = "git+https://github.com/blkmlk/memtrack-rs#5db56ffa559cbf6168d0eec428925398223d03f8"
 dependencies = [
  "addr2line",
  "bincode",
