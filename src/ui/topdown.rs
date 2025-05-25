@@ -284,11 +284,18 @@ impl CodeLoader {
                             row.col(|ui| {
                                 ui.label(
                                     RichText::new(format!(
-                                        "⬅ {}",
-                                        ByteSize::b(stack_info.peaked).to_string()
+                                        "⬅ Peak: {}, Leaked: {}",
+                                        ByteSize::b(stack_info.peaked).to_string(),
+                                        ByteSize::b(stack_info.leaked).to_string(),
                                     ))
                                     .strong(),
                                 );
+                                if stack_info.allocations > 1 {
+                                    ui.label(
+                                        RichText::new(format!("(x{})", stack_info.allocations))
+                                            .strong(),
+                                    );
+                                }
                             });
                         }
                     });
