@@ -264,8 +264,8 @@ impl CodeLoader {
             .resizable(false)
             .cell_layout(Layout::left_to_right(Align::Center))
             .column(Column::initial(20.0))
-            .column(Column::initial(100.0).at_most(100.0))
-            .column(Column::initial(50.0))
+            .column(Column::initial(100.0).at_most(120.0))
+            .column(Column::remainder())
             .body(|mut body| {
                 for (i, line) in lines {
                     let number = (i + 1) as u32;
