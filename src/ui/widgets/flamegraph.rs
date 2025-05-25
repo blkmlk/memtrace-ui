@@ -30,7 +30,7 @@ struct Canvas {
 
 pub struct Flamegraph {
     options: Options,
-    selected_chain_ids: HashSet<u32>,
+    selected_chain_ids: Option<HashSet<u32>>,
     info_bar_text: String,
 }
 
@@ -38,7 +38,7 @@ impl Flamegraph {
     pub fn new<'a>(opts: Options) -> Self {
         Self {
             options: opts,
-            selected_chain_ids: HashSet::new(),
+            selected_chain_ids: None,
             info_bar_text: String::new(),
         }
     }
@@ -65,7 +65,7 @@ impl Flamegraph {
     }
 
     pub fn reset(&mut self) {
-        self.selected_chain_ids.clear();
+        self.selected_chain_ids = None;
         self.info_bar_text.clear();
     }
 
@@ -122,7 +122,7 @@ impl Flamegraph {
             );
 
             if canvas.response.clicked() {
-                self.selected_chain_ids = frame.chain_ids.clone();
+                self.selected_chain_ids = Some(frame.chain_ids.clone());
             }
         };
 
@@ -150,14 +150,14 @@ impl Flamegraph {
                 continue;
             }
 
-            let mut is_selected = false;
-
-            if child.chain_ids.len() == self.selected_chain_ids.len() {
-                if child.chain_ids != self.selected_chain_ids {
+            let is_selected = if let Some(selected) = self.selected_chain_ids.as_ref() {
+                if selected.intersection(&child.chain_ids).next().is_none() {
                     continue;
                 }
-                is_selected = true;
-            }
+                selected == &child.chain_ids
+            } else {
+                false
+            };
 
             let child_value = if is_selected {
                 frame.value

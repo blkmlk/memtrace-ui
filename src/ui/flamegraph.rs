@@ -136,6 +136,7 @@ impl FlamegraphPage {
 }
 
 fn get_frames_from_ip_info(data: &AccumulatedData, ip_info: &InstructionPointer) -> Vec<String> {
+    // TODO: check the order of ip_info.inlined
     iter::once(&ip_info.frame)
         .chain(ip_info.inlined.iter())
         .map(|frame| {

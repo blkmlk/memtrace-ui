@@ -780,7 +780,7 @@ dependencies = [
 [[package]]
 name = "common"
 version = "0.1.0"
-source = "git+https://github.com/blkmlk/memtrack-rs#3a2b1677f05ea28d3fd96724ef32f5dd22de7c1c"
+source = "git+https://github.com/blkmlk/memtrack-rs#5db56ffa559cbf6168d0eec428925398223d03f8"
 dependencies = [
  "addr2line",
  "bincode",
@@ -1100,6 +1100,15 @@ dependencies = [
  "wasm-bindgen",
  "web-sys",
  "winit",
+]
+
+[[package]]
+name = "egui_ltreeview"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2785814fd481eb8d064e0e7190aa37b38c7d24b234f879c0f0932feb719e6049"
+dependencies = [
+ "egui",
 ]
 
 [[package]]
@@ -2089,6 +2098,7 @@ dependencies = [
  "eframe",
  "egui",
  "egui_extras",
+ "egui_ltreeview",
  "itertools",
  "reqwest",
 ]
