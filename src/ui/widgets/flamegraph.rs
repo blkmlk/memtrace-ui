@@ -22,7 +22,6 @@ struct StackFrame {
 }
 
 struct Canvas {
-    ctx: Context,
     response: Response,
     rect: Rect,
     painter: Painter,
@@ -48,12 +47,10 @@ impl Flamegraph {
             let (root, max_depth) = build_stackframes(frames);
 
             Frame::canvas(ui.style()).show(ui, |ui| {
-                let ctx = ui.ctx().clone();
                 let rect = ui.available_rect_before_wrap();
                 let response = ui.interact(rect, ui.id().with("canvas"), Sense::click_and_drag());
 
                 let canvas = Canvas {
-                    ctx,
                     response,
                     rect,
                     painter: ui.painter_at(rect),
