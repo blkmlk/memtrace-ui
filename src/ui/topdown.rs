@@ -1,6 +1,7 @@
 use crate::ui::MemInfo;
 use bytesize::ByteSize;
 use egui::*;
+use egui_extras::{Column, TableBuilder};
 use egui_ltreeview::{Action, NodeBuilder, TreeView, TreeViewBuilder};
 use std::cell::RefCell;
 use std::collections::{BTreeMap, HashMap};
@@ -259,19 +260,29 @@ impl CodeLoader {
             .enumerate()
             .filter(|(i, _)| *i + 1 >= min_offset && *i + 1 <= max_offset);
 
-        for (i, line) in lines {
-            let number = (i + 1) as u32;
-            if number == stack_info.line_number {
-                Grid::new("target_line")
-                    .striped(true)
-                    .num_columns(2)
-                    .show(ui, |ui| {
-                        ui.code(line);
-                        ui.heading(ByteSize::b(stack_info.peaked).to_string());
+        TableBuilder::new(ui)
+            .resizable(false)
+            .cell_layout(Layout::left_to_right(Align::Center))
+            .column(Column::initial(20.0))
+            .column(Column::initial(100.0).at_most(100.0))
+            .column(Column::remainder().at_least(50.0))
+            .body(|mut body| {
+                for (i, line) in lines {
+                    let number = (i + 1) as u32;
+                    body.row(15.0, |mut row| {
+                        row.col(|ui| {
+                            ui.label(format!("{}", number));
+                        });
+                        row.col(|ui| {
+                            ui.code(line);
+                        });
+                        if number == stack_info.line_number {
+                            row.col(|ui| {
+                                ui.label(ByteSize::b(stack_info.peaked).to_string());
+                            });
+                        }
                     });
-            } else {
-                ui.code(line);
-            }
-        }
+                }
+            });
     }
 }
