@@ -265,20 +265,30 @@ impl CodeLoader {
             .cell_layout(Layout::left_to_right(Align::Center))
             .column(Column::initial(20.0))
             .column(Column::initial(100.0).at_most(100.0))
-            .column(Column::remainder().at_least(50.0))
+            .column(Column::initial(50.0))
             .body(|mut body| {
                 for (i, line) in lines {
                     let number = (i + 1) as u32;
+                    let is_target_line = number == stack_info.line_number;
+
                     body.row(15.0, |mut row| {
                         row.col(|ui| {
                             ui.label(format!("{}", number));
                         });
+
                         row.col(|ui| {
-                            ui.code(line);
+                            ui.label(line);
                         });
-                        if number == stack_info.line_number {
+
+                        if is_target_line {
                             row.col(|ui| {
-                                ui.label(ByteSize::b(stack_info.peaked).to_string());
+                                ui.label(
+                                    RichText::new(format!(
+                                        "⬅ {}",
+                                        ByteSize::b(stack_info.peaked).to_string()
+                                    ))
+                                    .strong(),
+                                );
                             });
                         }
                     });
