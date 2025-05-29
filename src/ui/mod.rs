@@ -26,7 +26,6 @@ pub fn run_ui(data: MemInfo) -> eframe::Result {
 enum MainTab {
     Overview,
     TopDown,
-    Charts,
     Flamegraph,
 }
 
@@ -49,7 +48,7 @@ impl MemgraphApp {
         Self {
             top_down: TopDown::new(&info),
             info,
-            current_tab: MainTab::TopDown,
+            current_tab: MainTab::Overview,
             fg_page,
         }
     }
@@ -60,12 +59,7 @@ impl eframe::App for MemgraphApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.with_layout(Layout::top_down_justified(Align::Center), |ui| {
                 ui.horizontal(|ui| {
-                    for tab in [
-                        MainTab::Overview,
-                        MainTab::TopDown,
-                        MainTab::Flamegraph,
-                        MainTab::Charts,
-                    ] {
+                    for tab in [MainTab::Overview, MainTab::TopDown, MainTab::Flamegraph] {
                         let selected = self.current_tab == tab;
                         if ui
                             .selectable_label(selected, format!("{:?}", tab))
@@ -87,9 +81,6 @@ impl eframe::App for MemgraphApp {
                     }
                     MainTab::Flamegraph => {
                         self.fg_page.show(ui);
-                    }
-                    MainTab::Charts => {
-                        ui.label("This is the Charts tab.");
                     }
                 }
             });
