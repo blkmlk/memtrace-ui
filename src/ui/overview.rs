@@ -1,11 +1,11 @@
 use crate::ui::helpers::add_key_value;
 use crate::ui::MemInfo;
 use bytesize::ByteSize;
-use common::parser::{AccumulatedData, Frame};
 use eframe::emath::Align;
 use egui::{Layout, Ui};
 use egui_extras::{Column, TableBuilder};
 use itertools::Itertools;
+use memtrack_utils::parser::{AccumulatedData, Frame};
 use std::time::Instant;
 
 pub fn show(ui: &mut Ui, info: &MemInfo) {

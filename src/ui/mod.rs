@@ -6,7 +6,7 @@ mod widgets;
 
 use crate::ui::flamegraph::FlamegraphPage;
 use crate::ui::topdown::TopDown;
-use common::parser::AccumulatedData;
+use memtrack_utils::parser::AccumulatedData;
 use eframe::emath::Align;
 use egui::Layout;
 

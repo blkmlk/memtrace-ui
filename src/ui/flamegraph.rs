@@ -1,7 +1,7 @@
 use crate::ui::widgets::flamegraph::{Flamegraph, Options};
 use crate::ui::MemInfo;
-use common::parser::{AccumulatedData, Allocation, Frame, InstructionPointer};
 use egui::{ComboBox, Ui};
+use memtrack_utils::parser::{AccumulatedData, Allocation, Frame, InstructionPointer};
 use std::iter;
 
 struct Line {

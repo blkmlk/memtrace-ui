@@ -615,12 +615,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "byteorder"
-version = "1.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b"
-
-[[package]]
 name = "byteorder-lite"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -775,22 +769,6 @@ checksum = "ba5a308b75df32fe02788e748662718f03fde005016435c444eea572398219fd"
 dependencies = [
  "bytes",
  "memchr",
-]
-
-[[package]]
-name = "common"
-version = "0.1.0"
-source = "git+https://github.com/blkmlk/memtrack-rs#5db56ffa559cbf6168d0eec428925398223d03f8"
-dependencies = [
- "addr2line",
- "bincode",
- "byteorder",
- "indexmap",
- "nix",
- "rangemap",
- "rustc-demangle",
- "serde",
- "thiserror 2.0.12",
 ]
 
 [[package]]
@@ -1109,17 +1087,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2785814fd481eb8d064e0e7190aa37b38c7d24b234f879c0f0932feb719e6049"
 dependencies = [
  "egui",
-]
-
-[[package]]
-name = "egui_plot"
-version = "0.32.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "14ae092b46ea532f6c69d3e71036fb3b688fd00fd09c2a1e43d17051a8ae43e6"
-dependencies = [
- "ahash",
- "egui",
- "emath",
 ]
 
 [[package]]
@@ -2105,13 +2072,12 @@ dependencies = [
  "anyhow",
  "bytesize",
  "clap",
- "common",
  "eframe",
  "egui",
  "egui_extras",
  "egui_ltreeview",
- "egui_plot",
  "itertools",
+ "memtrack-utils",
  "reqwest",
 ]
 
@@ -2131,6 +2097,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "488016bfae457b036d996092f6cb448677611ce4449e970ceaf42695203f218a"
 dependencies = [
  "autocfg",
+]
+
+[[package]]
+name = "memtrack-utils"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d1f12a513e91d5940c68339d271b76afb2554b7404c18d53002554068843b31c"
+dependencies = [
+ "addr2line",
+ "bincode",
+ "indexmap",
+ "nix 0.30.1",
+ "rangemap",
+ "rustc-demangle",
+ "serde",
+ "thiserror 2.0.12",
 ]
 
 [[package]]
@@ -2276,6 +2258,18 @@ dependencies = [
  "cfg_aliases",
  "libc",
  "memoffset",
+]
+
+[[package]]
+name = "nix"
+version = "0.30.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "74523f3a35e05aba87a1d978330aef40f67b0304ac79c1c00b294c9830543db6"
+dependencies = [
+ "bitflags 2.9.1",
+ "cfg-if",
+ "cfg_aliases",
+ "libc",
 ]
 
 [[package]]
@@ -4817,7 +4811,7 @@ dependencies = [
  "futures-sink",
  "futures-util",
  "hex",
- "nix",
+ "nix 0.29.0",
  "ordered-stream",
  "rand",
  "serde",

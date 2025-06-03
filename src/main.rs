@@ -7,7 +7,7 @@ mod ui;
 use crate::ui::MemInfo;
 use anyhow::{anyhow, Context};
 use clap::Parser;
-use common::interpret::Interpreter;
+use memtrack_utils::interpret::Interpreter;
 use prelude::*;
 use std::fs::File;
 use std::io::BufWriter;
@@ -46,7 +46,7 @@ fn main() -> Result<()> {
         .exec(opt.cmd, opt.args, cwd, lib_path.to_str().unwrap())
         .context("failed to execute process")?;
 
-    let data = common::parser::Parser::new()
+    let data = memtrack_utils::parser::Parser::new()
         .parse_file(&trace_filepath)
         .context("failed to parse trace file")?;
 
