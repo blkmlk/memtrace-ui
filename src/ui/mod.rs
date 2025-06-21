@@ -16,7 +16,7 @@ pub fn run_ui(data: MemInfo) -> eframe::Result {
         ..Default::default()
     };
     eframe::run_native(
-        "Memgraph",
+        "MemTrace",
         options,
         Box::new(|_| Ok(Box::new(MemgraphApp::new(data)))),
     )
