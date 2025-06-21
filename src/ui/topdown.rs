@@ -175,10 +175,10 @@ fn make_stack_dirs(info: &MemInfo) -> (StackNode, HashMap<u32, Rc<RefCell<StackI
 
             for frame in ip_info.inlined.iter().chain(iter::once(&ip_info.frame)) {
                 let (fn_idx, file_idx, ln) = match frame {
-                    memtrack_utils::parser::Frame::Single { function_idx } => {
+                    memtrace_utils::parser::Frame::Single { function_idx } => {
                         (function_idx, &0, &0)
                     }
-                    memtrack_utils::parser::Frame::Multiple {
+                    memtrace_utils::parser::Frame::Multiple {
                         function_idx,
                         file_idx,
                         line_number,

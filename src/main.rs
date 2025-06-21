@@ -1,16 +1,35 @@
+//!
+//! # MemTrace UI
+//!
+//! A GUI Rust-based tool for visualizing heap memory consumption inspired by [heaptrack](https://github.com/KDE/heaptrack)
+//!
+//! The tool is using the [egui](https://github.com/emilk/egui) crate for building UI
+//!
+//! Supported features:
+//!
+//! ## 1. Overview page:
+//! ![overview](overview.png)
+//!
+//! ## 2. TopDown page with source code:
+//! ![topdown](topdown.png)
+//!
+//! ## 3. Flamegraph page:
+//! ![flamegraph](flamegraph.png)
+//!
+
 mod prelude;
 mod ui;
 
 use crate::ui::MemInfo;
 use anyhow::{anyhow, Context};
 use clap::Parser;
-use memtrack_utils::common::download_lib_if_needed;
-use memtrack_utils::interpret::Interpreter;
+use memtrace_utils::common::download_lib_if_needed;
+use memtrace_utils::interpret::Interpreter;
 use prelude::*;
 use std::env;
 use std::path::PathBuf;
 
-const LIB_VERSION: &str = "v0.1.0";
+const LIB_VERSION: &str = "v0.2.0";
 
 #[derive(Parser)]
 struct Opt {
@@ -23,11 +42,11 @@ fn main() -> Result<()> {
 
     let app_name = opt.cmd.split("/").last().unwrap().to_string();
 
-    let Some(cargo_home) = env::var_os("CARGO_HOME") else {
-        anyhow::bail!("missing $CARGO_HOME");
+    let Some(home) = env::var_os("HOME") else {
+        anyhow::bail!("missing $HOME");
     };
 
-    let lib_dir = PathBuf::from(cargo_home).join("lib");
+    let lib_dir = PathBuf::from(home).join(".cargo").join("lib");
 
     let lib_path =
         download_lib_if_needed(&lib_dir, LIB_VERSION).context("failed to load library")?;
@@ -43,7 +62,7 @@ fn main() -> Result<()> {
         .exec(opt.cmd, opt.args, cwd, &lib_path)
         .context("failed to execute process")?;
 
-    let data = memtrack_utils::parser::Parser::new()
+    let data = memtrace_utils::parser::Parser::new()
         .parse_file(&trace_filepath)
         .context("failed to parse trace file")?;
 

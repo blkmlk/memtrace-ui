@@ -2092,7 +2092,7 @@ dependencies = [
  "egui_extras",
  "egui_ltreeview",
  "itertools",
- "memtrack-utils",
+ "memtrace-utils",
 ]
 
 [[package]]
@@ -2114,10 +2114,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "memtrack-utils"
-version = "0.2.0"
+name = "memtrace-utils"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "99c9b639c40d58f1a83c9080e5f9c7fe23762f93be6fce452ffad8c35c144660"
+checksum = "338151aeb18ed3586bc2b2d8aab16d9df2bf48ad8e050736223d22b69056a2f0"
 dependencies = [
  "addr2line",
  "anyhow",

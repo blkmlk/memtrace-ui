@@ -5,7 +5,7 @@ use eframe::emath::Align;
 use egui::{Layout, Ui};
 use egui_extras::{Column, TableBuilder};
 use itertools::Itertools;
-use memtrack_utils::parser::{AccumulatedData, Frame};
+use memtrace_utils::parser::{AccumulatedData, Frame};
 use std::time::Instant;
 
 pub fn show(ui: &mut Ui, info: &MemInfo) {

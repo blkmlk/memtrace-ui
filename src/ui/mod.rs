@@ -6,9 +6,9 @@ mod widgets;
 
 use crate::ui::flamegraph::FlamegraphPage;
 use crate::ui::topdown::TopDown;
-use memtrack_utils::parser::AccumulatedData;
 use eframe::emath::Align;
 use egui::Layout;
+use memtrace_utils::parser::AccumulatedData;
 
 pub fn run_ui(data: MemInfo) -> eframe::Result {
     let options = eframe::NativeOptions {
@@ -18,7 +18,7 @@ pub fn run_ui(data: MemInfo) -> eframe::Result {
     eframe::run_native(
         "Memgraph",
         options,
-        Box::new(|cc| Ok(Box::new(MemgraphApp::new(data)))),
+        Box::new(|_| Ok(Box::new(MemgraphApp::new(data)))),
     )
 }
 
