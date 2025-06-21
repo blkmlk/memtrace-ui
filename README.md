@@ -3,9 +3,7 @@
 
 ## MemTrace UI
 
-A GUI Rust-based tool for visualizing heap memory consumption inspired by [heaptrack](https://github.com/KDE/heaptrack).
-
-MemTrace supports heaptrack trace files, so you can read the samples built on Linux
+A GUI Rust-based tool for visualizing heap memory consumption inspired by [heaptrack](https://github.com/KDE/heaptrack). MemTrace supports heaptrack trace files, so you can read the samples built on Linux
 
 The tool is using the [egui](https://github.com/emilk/egui) crate for building UI
 
