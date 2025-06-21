@@ -1,4 +1,4 @@
-# memgraph-ui
+# memtrace-ui
 
 
 ## MemTrace UI

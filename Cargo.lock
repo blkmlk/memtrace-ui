@@ -2081,21 +2081,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "78ca9ab1a0babb1e7d5695e3530886289c18cf2f87ec19a575a0abdce112e3a3"
 
 [[package]]
-name = "memgraph-ui"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bytesize",
- "clap",
- "eframe",
- "egui",
- "egui_extras",
- "egui_ltreeview",
- "itertools",
- "memtrace-utils",
-]
-
-[[package]]
 name = "memmap2"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2111,6 +2096,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "488016bfae457b036d996092f6cb448677611ce4449e970ceaf42695203f218a"
 dependencies = [
  "autocfg",
+]
+
+[[package]]
+name = "memtrace-ui"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bytesize",
+ "clap",
+ "eframe",
+ "egui",
+ "egui_extras",
+ "egui_ltreeview",
+ "itertools",
+ "memtrace-utils",
 ]
 
 [[package]]
