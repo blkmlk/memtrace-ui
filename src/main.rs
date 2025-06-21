@@ -20,6 +20,17 @@
 //! ## 3. Flamegraph:
 //! ![flamegraph](flamegraph.png)
 //!
+//! ## Installation
+//!
+//! ```bash
+//! cargo install memtrace-ui
+//! ```
+//!
+//! ## Usage
+//! > ℹ️ **Info:** Make sure your app is built in debug mode
+//! ```bash
+//! memtrace-ui <your_program>
+//! ```
 
 mod prelude;
 mod ui;
