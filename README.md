@@ -1,5 +1,6 @@
 # memgraph-ui
 
+
 ## MemTrace UI
 
 A GUI Rust-based tool for visualizing heap memory consumption inspired by [heaptrack](https://github.com/KDE/heaptrack)
@@ -9,14 +10,11 @@ The tool is using the [egui](https://github.com/emilk/egui) crate for building U
 Supported features:
 
 ### 1. Overview page:
-
-<img src="overview.png" alt="overview" width="800"/>
+![overview](overview.png)
 
 ### 2. TopDown page with source code:
+![topdown](topdown.png)
 
-<img src="topdown.png" alt="topdown" width="800"/>
-
-### 3. TopDown page:
-
+### 3. Flamegraph page:
 ![flamegraph](flamegraph.png)
 
