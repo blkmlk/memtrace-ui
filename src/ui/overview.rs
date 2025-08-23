@@ -101,11 +101,7 @@ fn make_top_peaks(data: &AccumulatedData) -> Vec<(String, String)> {
         .map(|alloc| {
             let trace = &data.traces[(alloc.trace_idx - 1) as usize];
             let ip = &data.instruction_pointers[(trace.ip_idx - 1) as usize];
-            let fn_idx = match ip.frame {
-                Frame::Single { function_idx } => function_idx,
-                Frame::Multiple { function_idx, .. } => function_idx,
-            };
-            let fn_name = &data.strings[fn_idx];
+            let fn_name = fn_name_from_frame(&data.strings, ip.frame.as_ref());
             (fn_name, alloc.data.peak)
         })
         .into_grouping_map()
@@ -113,7 +109,7 @@ fn make_top_peaks(data: &AccumulatedData) -> Vec<(String, String)> {
 
     let contributions = grouped
         .iter()
-        .sorted_by(|a, b| b.1.cmp(&a.1))
+        .sorted_by(|a, b| b.1.cmp(&a.1).then(b.0.cmp(a.0)))
         .map(|i| (i.0.to_string(), ByteSize::b(*i.1).to_string()))
         .collect::<Vec<_>>();
 
@@ -127,11 +123,7 @@ fn make_top_leaks(data: &AccumulatedData) -> Vec<(String, String)> {
         .map(|alloc| {
             let trace = &data.traces[(alloc.trace_idx - 1) as usize];
             let ip = &data.instruction_pointers[(trace.ip_idx - 1) as usize];
-            let fn_idx = match ip.frame {
-                Frame::Single { function_idx } => function_idx,
-                Frame::Multiple { function_idx, .. } => function_idx,
-            };
-            let fn_name = &data.strings[fn_idx];
+            let fn_name = fn_name_from_frame(&data.strings, ip.frame.as_ref());
             (fn_name, alloc.data.leaked)
         })
         .into_grouping_map()
@@ -139,7 +131,7 @@ fn make_top_leaks(data: &AccumulatedData) -> Vec<(String, String)> {
 
     let contributions = grouped
         .iter()
-        .sorted_by(|a, b| b.1.cmp(&a.1))
+        .sorted_by(|a, b| b.1.cmp(&a.1).then(b.0.cmp(a.0)))
         .map(|i| (i.0.to_string(), ByteSize::b(*i.1).to_string()))
         .collect::<Vec<_>>();
 
@@ -153,11 +145,7 @@ fn make_top_allocations(data: &AccumulatedData) -> Vec<(String, String)> {
         .map(|alloc| {
             let trace = &data.traces[(alloc.trace_idx - 1) as usize];
             let ip = &data.instruction_pointers[(trace.ip_idx - 1) as usize];
-            let fn_idx = match ip.frame {
-                Frame::Single { function_idx } => function_idx,
-                Frame::Multiple { function_idx, .. } => function_idx,
-            };
-            let fn_name = &data.strings[fn_idx];
+            let fn_name = fn_name_from_frame(&data.strings, ip.frame.as_ref());
             (fn_name, alloc.data.allocations)
         })
         .into_grouping_map()
@@ -165,7 +153,7 @@ fn make_top_allocations(data: &AccumulatedData) -> Vec<(String, String)> {
 
     let contributions = grouped
         .iter()
-        .sorted_by(|a, b| b.1.cmp(&a.1))
+        .sorted_by(|a, b| b.1.cmp(&a.1).then(b.0.cmp(a.0)))
         .map(|i| (i.0.to_string(), i.1.to_string()))
         .collect::<Vec<_>>();
 
@@ -179,11 +167,7 @@ fn make_top_tmp_allocations(data: &AccumulatedData) -> Vec<(String, String)> {
         .map(|alloc| {
             let trace = &data.traces[(alloc.trace_idx - 1) as usize];
             let ip = &data.instruction_pointers[(trace.ip_idx - 1) as usize];
-            let fn_idx = match ip.frame {
-                Frame::Single { function_idx } => function_idx,
-                Frame::Multiple { function_idx, .. } => function_idx,
-            };
-            let fn_name = &data.strings[fn_idx];
+            let fn_name = fn_name_from_frame(&data.strings, ip.frame.as_ref());
             (fn_name, alloc.data.temporary)
         })
         .into_grouping_map()
@@ -191,7 +175,7 @@ fn make_top_tmp_allocations(data: &AccumulatedData) -> Vec<(String, String)> {
 
     let contributions = grouped
         .iter()
-        .sorted_by(|a, b| b.1.cmp(&a.1))
+        .sorted_by(|a, b| b.1.cmp(&a.1).then(b.0.cmp(a.0)))
         .map(|i| (i.0.to_string(), i.1.to_string()))
         .collect::<Vec<_>>();
 
@@ -204,6 +188,8 @@ fn add_table(
     headers: [&str; 2],
     data: impl IntoIterator<Item = (String, String)>,
 ) {
+    const HEIGHT: f32 = 20.0;
+
     ui.push_id(Instant::now(), |ui| {
         ui.with_layout(Layout::top_down_justified(Align::Center), |ui| {
             ui.label(label);
@@ -213,7 +199,7 @@ fn add_table(
                 .cell_layout(Layout::left_to_right(Align::Center))
                 .column(Column::remainder().clip(true))
                 .column(Column::remainder())
-                .header(20.0, |mut header| {
+                .header(HEIGHT, |mut header| {
                     for header_label in headers {
                         header.col(|ui| {
                             ui.label(header_label);
@@ -222,7 +208,7 @@ fn add_table(
                 })
                 .body(|mut body| {
                     for a in data {
-                        body.row(20.0, |mut row| {
+                        body.row(HEIGHT, |mut row| {
                             row.col(|ui| {
                                 ui.label(a.0);
                             });
@@ -234,4 +220,20 @@ fn add_table(
                 });
         });
     });
+}
+
+pub fn fn_name_from_frame<'a>(dict: &'a [String], frame: Option<&Frame>) -> &'a str {
+    let fn_idx = frame.map(|f| match f {
+        Frame::Single { function_idx } => *function_idx,
+        Frame::Multiple { function_idx, .. } => *function_idx,
+    });
+
+    if let Some(idx) = fn_idx
+        && idx > 0
+        && idx < dict.len()
+    {
+        &dict[idx - 1]
+    } else {
+        "unknown"
+    }
 }
