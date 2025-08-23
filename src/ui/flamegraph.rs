@@ -1,8 +1,8 @@
+use crate::ui::overview::fn_name_from_frame;
 use crate::ui::widgets::flamegraph::{Flamegraph, Options};
 use crate::ui::MemInfo;
 use egui::{ComboBox, Ui};
-use memtrace_utils::parser::{AccumulatedData, Allocation, Frame, InstructionPointer};
-use std::iter;
+use memtrace_utils::parser::{AccumulatedData, Allocation, InstructionPointer};
 
 struct Line {
     frames: Vec<String>,
@@ -137,14 +137,11 @@ impl FlamegraphPage {
 
 fn get_frames_from_ip_info(data: &AccumulatedData, ip_info: &InstructionPointer) -> Vec<String> {
     // TODO: check the order of ip_info.inlined
-    iter::once(&ip_info.frame)
-        .chain(ip_info.inlined.iter())
-        .map(|frame| {
-            let function_idx = match frame {
-                Frame::Single { function_idx } => function_idx,
-                Frame::Multiple { function_idx, .. } => function_idx,
-            };
-            data.strings[function_idx - 1].clone()
-        })
+    ip_info
+        .frame
+        .as_ref()
+        .into_iter()
+        .chain(&ip_info.inlined)
+        .map(|frame| fn_name_from_frame(&data.strings, Some(frame)).to_string())
         .collect()
 }

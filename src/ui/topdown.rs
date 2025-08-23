@@ -5,9 +5,9 @@ use egui_extras::{Column, TableBuilder};
 use egui_ltreeview::{Action, NodeBuilder, TreeView, TreeViewBuilder};
 use std::cell::RefCell;
 use std::collections::{BTreeMap, HashMap};
+use std::fs;
 use std::ops::Deref;
 use std::rc::Rc;
-use std::{fs, iter};
 
 const MIN_PANEL_WIDTH: f32 = 500.0;
 
@@ -173,7 +173,7 @@ fn make_stack_dirs(info: &MemInfo) -> (StackNode, HashMap<u32, Rc<RefCell<StackI
         for ip_idx in ip_idxs.iter().rev() {
             let ip_info = &info.data.instruction_pointers[*ip_idx as usize - 1];
 
-            for frame in ip_info.inlined.iter().chain(iter::once(&ip_info.frame)) {
+            for frame in ip_info.inlined.iter().chain(&ip_info.frame) {
                 let (fn_idx, file_idx, ln) = match frame {
                     memtrace_utils::parser::Frame::Single { function_idx } => {
                         (function_idx, &0, &0)
@@ -196,9 +196,16 @@ fn make_stack_dirs(info: &MemInfo) -> (StackNode, HashMap<u32, Rc<RefCell<StackI
 
                     global_id += 1;
 
+                    let name = if *fn_idx > 0 && *fn_idx < info.data.strings.len() {
+                        &info.data.strings[*fn_idx - 1]
+                    } else {
+                        ""
+                    }
+                    .to_string();
+
                     let info = Rc::new(RefCell::new(StackInfo {
                         id: global_id,
-                        name: info.data.strings[fn_idx - 1].clone(),
+                        name,
                         file_name,
                         line_number: parent_ln,
                         ..Default::default()
