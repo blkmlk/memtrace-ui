@@ -53,7 +53,12 @@ const LIB_VERSION: &str = "v0.2.0";
 
 #[derive(Parser)]
 struct Opt {
-    #[clap(short, long, default_value = "false")]
+    #[clap(
+        short,
+        long,
+        default_value = "false",
+        help = "Open an existing trace file"
+    )]
     open: bool,
     target: String,
     args: Vec<String>,
