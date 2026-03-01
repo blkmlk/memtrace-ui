@@ -196,7 +196,7 @@ fn make_stack_dirs(info: &MemInfo) -> (StackNode, HashMap<u32, Rc<RefCell<StackI
 
                     global_id += 1;
 
-                    let name = if *fn_idx > 0 && *fn_idx < info.data.strings.len() {
+                    let name = if *fn_idx > 0 && *fn_idx <= info.data.strings.len() {
                         &info.data.strings[*fn_idx - 1]
                     } else {
                         ""
