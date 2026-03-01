@@ -2102,7 +2102,7 @@ dependencies = [
 
 [[package]]
 name = "memtrace-ui"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "bytesize",
@@ -2117,9 +2117,9 @@ dependencies = [
 
 [[package]]
 name = "memtrace-utils"
-version = "0.4.1"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e9454bb4f982e643cc5b8f6202fe572c474ce72e0622eca6d7cc91536248f835"
+checksum = "ff4bd2a657b376ccb0642153eb5db0364e1b25b2f09d7ad31a61893046f76f54"
 dependencies = [
  "addr2line",
  "anyhow",
