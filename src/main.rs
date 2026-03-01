@@ -41,7 +41,7 @@ mod prelude;
 mod ui;
 
 use crate::ui::MemInfo;
-use anyhow::{anyhow, Context};
+use anyhow::{Context, anyhow};
 use clap::Parser;
 use memtrace_utils::common::download_lib_if_needed;
 use memtrace_utils::interpret::Interpreter;
@@ -49,7 +49,7 @@ use prelude::*;
 use std::env;
 use std::path::PathBuf;
 
-const LIB_VERSION: &str = "v0.2.0";
+const LIB_VERSION: &str = "v0.5.0";
 
 #[derive(Parser)]
 struct Opt {
